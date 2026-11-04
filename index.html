@@ -1,0 +1,1745 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Ladder Duels</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Sci-Fi Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        orbitron: ['Orbitron', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                        rajdhani: ['Rajdhani', 'sans-serif'],
+                    },
+                    colors: {
+                        neon: {
+                            cyan: '#00f3ff',
+                            magenta: '#ff0055',
+                            purple: '#b000ff',
+                            amber: '#ffaa00',
+                            emerald: '#00ff66'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background: #050714;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(0, 243, 255, 0.08) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(255, 0, 85, 0.08) 0px, transparent 50%),
+                radial-gradient(at 50% 100%, rgba(176, 0, 255, 0.05) 0px, transparent 50%);
+            min-height: 100vh;
+            color: #e2e8f0;
+            overflow-x: hidden;
+        }
+
+        .cyber-border {
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.15);
+            border: 1px solid rgba(0, 243, 255, 0.25);
+        }
+
+        .cyber-border-p2 {
+            box-shadow: 0 0 15px rgba(255, 0, 85, 0.15);
+            border: 1px solid rgba(255, 0, 85, 0.25);
+        }
+
+        .glass-panel {
+            background: rgba(10, 15, 30, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+
+        /* Legible word font: O/D/0/Q etc. are clearly distinct */
+        .word-font,
+        #p1-move-input, #p2-move-input,
+        #p1-start-disp, #p1-target-disp, #p2-start-disp, #p2-target-disp,
+        #selected-start-disp, #selected-target-disp {
+            font-family: 'JetBrains Mono', ui-monospace, 'Courier New', monospace !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.12em;
+        }
+        #p1-move-input::placeholder, #p2-move-input::placeholder {
+            font-weight: 500; letter-spacing: 0; font-size: 0.75rem;
+        }
+
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(5, 7, 20, 0.8);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 243, 255, 0.3);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="font-rajdhani antialiased flex flex-col justify-between min-h-screen">
+
+    <!-- HEADER -->
+    <header class="w-full bg-slate-950/90 border-b border-cyan-500/20 px-4 py-3 sticky top-0 z-40 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="bg-slate-900 border border-cyan-500/50 p-2 rounded-xl shadow-[0_0_15px_rgba(0,243,255,0.3)]">
+                    <i class="fa-solid fa-dna text-neon-cyan text-xl animate-pulse"></i>
+                </div>
+                <div>
+                    <h1 class="font-orbitron text-lg sm:text-xl font-black tracking-widest bg-gradient-to-r from-neon-cyan via-purple-400 to-neon-magenta bg-clip-text text-transparent">
+                        WORD LADDER DUEL
+                    </h1>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-3 text-xs font-mono">
+                <div id="header-score-badge" class="hidden bg-slate-900/90 border border-purple-500/40 px-3 py-1.5 rounded-xl flex items-center space-x-3">
+                    <span class="text-cyan-400 font-bold font-orbitron"></span><p id="mode-subtitle" class="text-[10px] sm:text-xs font-mono text-cyan-400/70 tracking-wider">WORD LADDER DUEL</p></span>
+                    <span class="text-cyan-400 font-bold font-orbitron"><span id="p1-name-score-tag">P1</span>: <span id="p1-score-val" class="text-white">0 pts</span></span>
+                    <span class="text-slate-600">|</span>
+                    <span class="text-pink-400 font-bold font-orbitron"><span id="p2-name-score-tag">P2</span>: <span id="p2-score-val" class="text-white">0 pts</span></span>
+                </div>
+
+                <button id="gm-end-game-btn" onclick="playSound('click'); openEndGameConfirm();" class="hidden px-3 py-1.5 bg-rose-950/80 hover:bg-rose-900 border border-rose-500/50 text-rose-300 font-orbitron font-bold text-[10px] rounded-xl transition-all">
+                    <i class="fa-solid fa-flag-checkered mr-1"></i> END GAME
+                </button>
+                <div id="connection-badge" class="bg-slate-900/90 border border-slate-800 px-3 py-1.5 rounded-xl flex items-center space-x-2">
+                    <span id="conn-dot" class="w-2 h-2 rounded-full bg-amber-500"></span>
+                    <span id="user-role-label" class="text-slate-400">Connecting...</span>
+                </div>
+                <div id="room-code-tag" class="hidden bg-cyan-950/80 border border-cyan-500/40 text-neon-cyan px-3 py-1.5 rounded-xl font-bold font-orbitron">
+                    ROOM: <span id="display-room-code">------</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- NOTIFICATION TOAST CONTAINER -->
+    <div id="toast-container" class="fixed top-16 right-4 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <!-- VIEW 1: LOBBY SYSTEM -->
+    <section id="view-lobby" class="max-w-4xl mx-auto px-4 py-8 w-full flex-grow flex flex-col justify-center">
+        <div class="glass-panel cyber-border rounded-3xl p-6 sm:p-10 shadow-2xl relative overflow-hidden space-y-8">
+            <div class="text-center space-y-3">
+                <span class="px-3.5 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 font-mono text-xs tracking-widest uppercase rounded-full">
+                    THE ULTIMATE VOCABULARY SHOWDOWN
+                </span>
+                <h2 class="text-3xl sm:text-4xl font-orbitron font-extrabold text-white tracking-wide">
+                    <span class="text-neon-cyan">ENTER THE LOBBY</span>
+                </h2>
+            </div>
+
+            <!-- PROFILE SETUP -->
+            <div class="bg-slate-950/90 p-5 rounded-2xl border border-cyan-500/30 space-y-4">
+                <div class="flex justify-between items-center text-xs font-mono text-cyan-400">
+                    <span class="uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-user-gear text-neon-cyan"></i> Set Your Gaming Profile
+                    </span>
+                    <span id="name-save-indicator" class="text-emerald-400 hidden"><i class="fa-solid fa-check"></i> Saved</span>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-3 items-center">
+                    <div class="relative flex-shrink-0">
+                        <button onclick="playSound('click'); toggleIconPickerModal();" id="current-avatar-btn" class="w-12 h-12 bg-slate-900 border-2 border-cyan-500/60 rounded-xl flex items-center justify-center text-neon-cyan hover:border-cyan-400 transition-all shadow-[0_0_10px_rgba(0,243,255,0.2)]">
+                            <span id="header-avatar-svg-container" class="w-6 h-6 flex items-center justify-center">
+                                <i class="fa-solid fa-gamepad text-neon-cyan text-base"></i>
+                            </span>
+                        </button>
+                    </div>
+
+                    <input type="text" id="player-name-input" placeholder="Enter Operator Name..." maxlength="16" class="flex-grow w-full bg-slate-900 border border-slate-700 focus:border-cyan-500 text-white font-orbitron text-sm px-4 py-3.5 rounded-xl focus:outline-none">
+                    
+                    <button onclick="playSound('click'); savePlayerName();" class="w-full sm:w-auto px-6 py-3.5 bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-orbitron font-extrabold text-xs rounded-xl shadow-[0_0_10px_rgba(0,243,255,0.3)] transition-all">
+                        INITIATE
+                    </button>
+                </div>
+            </div>
+
+            <!-- LOBBY CREATION & JOIN OPTIONS -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                <!-- Create Lobby -->
+                <div class="bg-slate-900/80 p-6 rounded-2xl border border-amber-500/30 flex flex-col justify-between space-y-4 hover:border-amber-500/60 transition-all">
+                    <div class="space-y-2">
+                        <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-crown"></i>
+                        </div>
+                        <h3 class="font-orbitron font-bold text-white text-lg">Create Lobby</h3>
+                        <p class="text-slate-400 text-xs">Host Control: Game Master manages the lobby.</p>
+                        <p class="text-slate-400 text-xs">Slot Allocation: First handles in claim P1 & P2.</p>
+                    </div>
+
+                    <button onclick="playSound('click'); createLobby();" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-cyan-500 hover:opacity-90 text-slate-950 font-orbitron font-extrabold text-sm tracking-wider rounded-xl shadow-[0_0_20px_rgba(255,170,0,0.3)] transition-all">
+                        CREATE LOBBY
+                    </button>
+                </div>
+
+                <!-- Join Room Options -->
+                <div class="bg-slate-900/80 p-6 rounded-2xl border border-pink-500/30 flex flex-col justify-between space-y-4 hover:border-pink-500/60 transition-all">
+                    <div class="space-y-2">
+                        <div class="w-10 h-10 rounded-xl bg-pink-500/10 border border-pink-500/30 text-neon-magenta flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-right-to-bracket"></i>
+                        </div>
+                        <h3 class="font-orbitron font-bold text-white text-lg">Join Room</h3>
+                        <p class="text-slate-400 text-xs">Input room code to join.</p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <input type="text" id="join-room-input" placeholder="ROOM CODE" maxlength="6" oninput="checkRoomAvailability(this.value)" class="w-full bg-slate-950 border border-slate-700 focus:border-pink-500 text-center font-orbitron font-bold text-white uppercase tracking-widest py-3 rounded-xl focus:outline-none">
+                        
+                        <div class="grid grid-cols-2 gap-3">
+                            <button id="btn-join-p1" onclick="playSound('click'); joinLobby('p1');" class="py-3 bg-cyan-950 hover:bg-cyan-900 border border-cyan-500/40 text-cyan-300 font-orbitron font-bold text-xs rounded-xl transition-all">
+                                JOIN AS P1
+                            </button>
+                            <button id="btn-join-p2" onclick="playSound('click'); joinLobby('p2');" class="py-3 bg-pink-950 hover:bg-pink-900 border border-pink-500/40 text-pink-300 font-orbitron font-bold text-xs rounded-xl transition-all">
+                                JOIN AS P2
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- VIEW 2: LOBBY WAITING ROOM -->
+    <section id="view-waiting" class="hidden max-w-4xl mx-auto px-4 py-8 w-full flex-grow flex flex-col justify-center">
+        <div class="glass-panel cyber-border rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
+            <div class="flex flex-wrap justify-between items-center gap-4 border-b border-slate-800 pb-4">
+                <div>
+                    <span class="text-xs font-mono text-cyan-400">LOBBY WAITING BAY</span>
+                    <h2 class="text-2xl font-orbitron font-extrabold text-white">ROOM: <span id="waiting-code-display" class="text-neon-cyan">------</span></h2>
+                </div>
+                <button onclick="playSound('click'); copyRoomCode();" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-mono text-slate-300 rounded-xl flex items-center space-x-2">
+                    <i class="fa-solid fa-copy"></i><span>Copy Code</span>
+                </button>
+            </div>
+
+            <!-- Slots Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- GM Slot -->
+                <div class="bg-slate-900/90 p-4 rounded-2xl border border-amber-500/40 space-y-2">
+                    <div class="text-[10px] font-mono text-amber-400 font-bold uppercase">GAME MASTER (HOST)</div>
+                    <div id="gm-slot-name" class="font-orbitron font-bold text-white text-base">NONE</div>
+                </div>
+                <!-- P1 Slot -->
+                <div class="bg-slate-900/90 p-4 rounded-2xl border border-cyan-500/40 space-y-2 flex flex-col justify-between">
+                    <div>
+                        <div class="text-[10px] font-mono text-cyan-400 font-bold uppercase">PLAYER 1 (1ST SLOT)</div>
+                        <div id="p1-slot-name" class="font-orbitron font-bold text-white text-base">------</div>
+                    </div>
+                    <div id="gm-kick-p1-container" class="pt-2 hidden">
+                        <button onclick="playSound('click'); kickUser('p1');" class="w-full py-1.5 bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 font-mono text-[10px] rounded-lg">
+                            <i class="fa-solid fa-user-slash mr-1"></i> KICK P1
+                        </button>
+                    </div>
+                </div>
+                <!-- P2 Slot -->
+                <div class="bg-slate-900/90 p-4 rounded-2xl border border-pink-500/40 space-y-2 flex flex-col justify-between">
+                    <div>
+                        <div class="text-[10px] font-mono text-pink-400 font-bold uppercase">PLAYER 2 (2ND SLOT)</div>
+                        <div id="p2-slot-name" class="font-orbitron font-bold text-white text-base">------</div>
+                    </div>
+                    <div id="gm-kick-p2-container" class="pt-2 hidden">
+                        <button onclick="playSound('click'); kickUser('p2');" class="w-full py-1.5 bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 font-mono text-[10px] rounded-lg">
+                            <i class="fa-solid fa-user-slash mr-1"></i> KICK P2
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Difficulty / word length -->
+            <div class="bg-slate-900/90 p-4 rounded-2xl border border-amber-500/30 space-y-3">
+                <div class="text-[10px] font-mono text-amber-400 font-bold uppercase tracking-wider">WORD LENGTH // DIFFICULTY</div>
+                <div id="difficulty-picker-waiting" class="grid grid-cols-4 gap-2"></div>
+                <p id="difficulty-picker-waiting-hint" class="text-[11px] font-mono text-slate-400"></p>
+            </div>
+
+            <div class="pt-4 flex justify-between items-center gap-4">
+                <button onclick="playSound('click'); leaveLobby();" class="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-orbitron font-bold text-xs rounded-xl">
+                    LEAVE ROOM
+                </button>
+                <div id="gm-start-game-container" class="hidden">
+                    <button onclick="playSound('click'); gmStartGame();" class="px-8 py-3 bg-gradient-to-r from-amber-500 to-cyan-500 hover:opacity-90 text-slate-950 font-orbitron font-black text-sm tracking-wider rounded-xl shadow-[0_0_20px_rgba(255,170,0,0.3)] transition-all">
+                        START DUEL
+                    </button>
+                </div>
+                <div id="waiting-gm-start-msg" class="text-xs font-mono text-amber-400">
+                    Waiting for Game Master to start the match...
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- VIEW 3: FLASHING 9-WORD SELECTION PHASE -->
+    <section id="view-drafting" class="hidden max-w-4xl mx-auto px-4 py-8 w-full flex-grow flex flex-col justify-center">
+        <div class="glass-panel cyber-border rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
+            <div class="text-center space-y-2">
+                <div class="flex justify-center items-center space-x-2">
+                    <span id="drafting-phase-badge" class="px-3.5 py-1 bg-pink-500/10 border border-pink-500/30 text-neon-magenta font-mono text-xs tracking-widest uppercase rounded-full">
+                        PLAYER SELECTION PHASE
+                    </span>
+                    <span class="px-3 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 font-mono text-xs rounded-full">
+                        <i class="fa-solid fa-stopwatch mr-1"></i> <span id="selection-timer">30</span>s
+                    </span>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-orbitron font-extrabold text-white" id="drafting-header-title">FLASHING 9-WORD GRID</h2>
+                <p class="text-slate-400 text-xs sm:text-sm" id="drafting-subtitle">Select START and TARGET words from the 9 unique, complex words generated for your opponent.</p>
+                <p id="drafting-recap" class="hidden text-xs font-mono text-emerald-300"></p>
+            </div>
+
+            <div id="word-selection-card-container" class="bg-slate-900/90 p-6 rounded-2xl border border-slate-800 space-y-6">
+                <div class="flex flex-wrap justify-between items-center gap-4 text-xs font-mono">
+                    <div class="text-cyan-400">START WORD: <span id="selected-start-disp" class="font-bold text-white font-orbitron text-sm">NONE</span></div>
+                    <div class="text-pink-400">TARGET WORD: <span id="selected-target-disp" class="font-bold text-white font-orbitron text-sm">NONE</span></div>
+                    <button onclick="reshuffleWordGrid()" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 rounded transition-all flex items-center gap-1.5"><i class="fa-solid fa-rotate"></i> REROLL</button>
+                </div>
+
+                <!-- Grid of 9 Flashing/Generated Unique Complex Words -->
+                <div id="selection-par-disp" class="text-center text-xs font-mono text-amber-300 min-h-[1.25rem]"></div>
+                <div id="flashing-words-grid" class="grid grid-cols-3 gap-3"></div>
+
+                <div class="pt-2">
+                    <button id="confirm-word-lock-btn" onclick="playSound('click'); lockInFlashingSelection();" class="w-full py-3.5 bg-gradient-to-r from-pink-600 to-cyan-500 hover:opacity-90 text-slate-950 font-orbitron font-black text-sm tracking-wider rounded-xl shadow-[0_0_20px_rgba(255,0,85,0.3)] disabled:opacity-40 disabled:cursor-not-allowed">
+                        LOCK IN WORDS FOR OPPONENT
+                    </button>
+                </div>
+            </div>
+
+            <div id="waiting-word-lock-msg" class="text-center text-xs font-mono text-amber-400 hidden animate-pulse">
+                Opponent is currently choosing start and target words from their 9-word grid...
+            </div>
+        </div>
+    </section>
+
+    <!-- VIEW 4: MAIN GAMEPLAY DASHBOARD -->
+    <section id="view-game" class="hidden max-w-6xl mx-auto px-4 py-6 w-full flex-grow space-y-6">
+        <div class="glass-panel cyber-border rounded-2xl p-4 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2">
+                    <span class="w-3 h-3 rounded-full bg-cyan-400 animate-ping"></span>
+                    <span id="turn-indicator" class="font-orbitron font-extrabold text-white text-base sm:text-lg">ROUND 1 // LIVE DUEL CONSOLES</span>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3 text-xs font-mono text-amber-400">
+                <span><i class="fa-solid fa-stopwatch text-neon-cyan mr-1"></i> <span id="solve-timer-disp">0</span>s</span>
+                <span id="gm-announcement"></span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- PLAYER 1 BOARD -->
+            <div id="p1-board-card" class="glass-panel cyber-border rounded-3xl p-5 space-y-4">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-9 h-9 rounded-xl bg-cyan-950/80 border border-cyan-500/40 flex items-center justify-center text-neon-cyan">
+                            <i class="fa-solid fa-gamepad"></i>
+                        </div>
+                        <h3 id="p1-card-name" class="font-orbitron font-bold text-white">PLAYER 1</h3>
+                    </div>
+                    <span id="p1-score-in-board" class="text-xs font-mono text-neon-cyan font-bold bg-cyan-950 px-2.5 py-1 rounded border border-cyan-500/30">0 PTS</span>
+                </div>
+
+                <div class="flex justify-between items-center bg-slate-900/80 p-3 rounded-xl border border-slate-800 text-xs font-mono">
+                    <div>START: <span id="p1-start-disp" class="font-bold text-white font-orbitron">---</span></div>
+                    <i class="fa-solid fa-right-long text-cyan-500"></i>
+                    <div>TARGET: <span id="p1-target-disp" class="font-bold text-neon-cyan font-orbitron">---</span></div>
+                </div>
+
+                <div class="space-y-2">
+                    <span class="text-[10px] font-mono text-slate-400 tracking-wider">WORD LADDER HISTORY</span>
+                    <div id="p1-word-history" class="bg-slate-950/90 rounded-2xl p-4 border border-slate-800 min-h-[160px] max-h-[220px] overflow-y-auto space-y-2"></div>
+                </div>
+
+                <div id="p1-input-zone" class="space-y-3 pt-2">
+                    <div class="flex gap-2">
+                        <input type="text" id="p1-move-input" placeholder="Enter 3-letter word..." maxlength="3" onkeydown="if(event.key==='Enter') submitMove('p1')" class="flex-grow bg-slate-900 border border-cyan-500/40 text-center font-orbitron text-lg font-bold text-white uppercase py-2.5 rounded-xl focus:outline-none">
+                        <button onclick="submitMove('p1')" class="px-5 bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-orbitron font-extrabold text-xs rounded-xl shadow-[0_0_10px_rgba(0,243,255,0.3)]">
+                            SHIFT
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="playSound('click'); surrenderMatch('p1');" class="col-span-2 py-2 bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 font-mono text-xs rounded-xl">
+                            SURRENDER TURN
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PLAYER 2 BOARD -->
+            <div id="p2-board-card" class="glass-panel cyber-border-p2 rounded-3xl p-5 space-y-4">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-9 h-9 rounded-xl bg-pink-950/80 border border-pink-500/40 flex items-center justify-center text-neon-magenta">
+                            <i class="fa-solid fa-shield-halved"></i>
+                        </div>
+                        <h3 id="p2-card-name" class="font-orbitron font-bold text-white">PLAYER 2</h3>
+                    </div>
+                    <span id="p2-score-in-board" class="text-xs font-mono text-neon-magenta font-bold bg-pink-950 px-2.5 py-1 rounded border border-pink-500/30">0 PTS</span>
+                </div>
+
+                <div class="flex justify-between items-center bg-slate-900/80 p-3 rounded-xl border border-slate-800 text-xs font-mono">
+                    <div>START: <span id="p2-start-disp" class="font-bold text-white font-orbitron">---</span></div>
+                    <i class="fa-solid fa-right-long text-pink-500"></i>
+                    <div>TARGET: <span id="p2-target-disp" class="font-bold text-neon-magenta font-orbitron">---</span></div>
+                </div>
+
+                <div class="space-y-2">
+                    <span class="text-[10px] font-mono text-slate-400 tracking-wider">WORD LADDER HISTORY</span>
+                    <div id="p2-word-history" class="bg-slate-950/90 rounded-2xl p-4 border border-slate-800 min-h-[160px] max-h-[220px] overflow-y-auto space-y-2"></div>
+                </div>
+
+                <div id="p2-input-zone" class="space-y-3 pt-2">
+                    <div class="flex gap-2">
+                        <input type="text" id="p2-move-input" placeholder="Enter 3-letter word..." maxlength="3" onkeydown="if(event.key==='Enter') submitMove('p2')" class="flex-grow bg-slate-900 border border-pink-500/40 text-center font-orbitron text-lg font-bold text-white uppercase py-2.5 rounded-xl focus:outline-none">
+                        <button onclick="submitMove('p2')" class="px-5 bg-pink-600 hover:bg-pink-500 text-white font-orbitron font-extrabold text-xs rounded-xl shadow-[0_0_10px_rgba(255,0,85,0.3)]">
+                            SHIFT
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="playSound('click'); surrenderMatch('p2');" class="col-span-2 py-2 bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 font-mono text-xs rounded-xl">
+                            SURRENDER TURN
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ROUND END MODAL -->
+    <div id="round-end-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="glass-panel cyber-border rounded-3xl p-8 max-w-lg w-full text-center space-y-6">
+            <span class="px-3.5 py-1 bg-cyan-500/10 border border-cyan-500/30 text-neon-cyan font-mono text-xs tracking-widest uppercase rounded-full">
+                ROUND CONCLUDED // STANDINGS UPDATED
+            </span>
+            <h2 id="round-winner-title" class="text-3xl font-orbitron font-extrabold text-white">ROUND WINNER: P1</h2>
+            
+            <div id="standings-summary" class="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 text-xs font-mono text-slate-300 space-y-2 text-left"></div>
+
+            <div class="space-y-3 text-left">
+                <p id="next-round-info" class="text-amber-400 font-mono text-xs uppercase font-bold text-center"></p>
+                <div class="text-[10px] font-mono text-slate-400 uppercase tracking-wider text-center">Next round word length</div>
+                <div id="difficulty-picker-modal" class="grid grid-cols-4 gap-2"></div>
+                <p id="difficulty-picker-modal-hint" class="text-[11px] font-mono text-slate-400 text-center"></p>
+            </div>
+
+            <div id="gm-host-next-round-container" class="space-y-3 hidden">
+                <button onclick="playSound('click'); startNextRound();" class="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-orbitron font-bold text-xs rounded-xl">
+                    START NEXT ROUND (GM CONTROL)
+                </button>
+                <button onclick="playSound('click'); openEndGameConfirm();" class="w-full py-3 bg-rose-950/80 hover:bg-rose-900 border border-rose-500/50 text-rose-300 font-orbitron font-bold text-xs rounded-xl">
+                    <i class="fa-solid fa-flag-checkered mr-1"></i> END GAME &amp; DECLARE WINNER
+                </button>
+            </div>
+            <div id="waiting-gm-next-msg" class="text-xs font-mono text-slate-400 hidden">
+                Waiting for Game Master to start the next round...
+            </div>
+        </div>
+    </div>
+
+    <!-- END GAME CONFIRM MODAL -->
+    <div id="end-game-confirm-modal" class="fixed inset-0 z-[70] bg-slate-950/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="glass-panel cyber-border rounded-3xl p-6 max-w-md w-full space-y-5 text-center">
+            <div class="w-12 h-12 mx-auto rounded-xl bg-rose-500/10 border border-rose-500/40 text-rose-400 flex items-center justify-center text-xl">
+                <i class="fa-solid fa-flag-checkered"></i>
+            </div>
+            <h3 class="font-orbitron font-bold text-white text-lg">END GAME NOW?</h3>
+            <div id="end-game-preview" class="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 text-xs font-mono text-slate-300 space-y-1"></div>
+            <p class="text-[11px] font-mono text-slate-400">The player with the most points is declared the winner. A round still in progress is not scored.</p>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="playSound('click'); closeEndGameConfirm();" class="py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-orbitron font-bold text-xs rounded-xl">KEEP PLAYING</button>
+                <button onclick="playSound('click'); endGameByGM();" class="py-3 bg-rose-600 hover:bg-rose-500 text-white font-orbitron font-bold text-xs rounded-xl">END GAME</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GAME OVER MODAL -->
+    <div id="game-over-modal" class="fixed inset-0 z-[60] bg-slate-950/85 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="glass-panel cyber-border rounded-3xl p-8 max-w-lg w-full text-center space-y-6">
+            <span class="px-3.5 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 font-mono text-xs tracking-widest uppercase rounded-full">GAME OVER // FINAL RESULT</span>
+            <div class="text-5xl text-amber-400"><i class="fa-solid fa-trophy"></i></div>
+            <h2 id="game-over-title" class="text-3xl font-orbitron font-extrabold text-white">WINNER</h2>
+            <div id="game-over-summary" class="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 text-xs font-mono text-slate-300 space-y-2 text-left"></div>
+            <div id="game-over-gm-actions" class="hidden">
+                <button onclick="playSound('click'); gmNewGame();" class="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-orbitron font-bold text-xs rounded-xl">NEW GAME (BACK TO LOBBY)</button>
+            </div>
+            <div id="game-over-player-msg" class="space-y-3 hidden">
+                <p class="text-xs font-mono text-slate-400">Waiting for the Game Master to start a new game...</p>
+                <button onclick="playSound('click'); leaveLobby();" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-orbitron font-bold text-xs rounded-xl">LEAVE ROOM</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- WORD LIST DISCLAIMER MODAL -->
+    <div id="disclaimer-modal" class="fixed inset-0 z-[80] bg-slate-950/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="glass-panel cyber-border rounded-3xl p-6 max-w-md w-full space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-orbitron font-bold text-white text-base"><i class="fa-solid fa-book mr-2 text-neon-cyan"></i>WORD LIST DISCLAIMER</h3>
+                <button onclick="playSound('click'); toggleDisclaimer();" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="text-xs text-slate-300 space-y-3 leading-relaxed">
+                <p>The official reference for words in this game is the <span class="text-white font-bold">Collins Scrabble Dictionary</span> word lists.</p>
+                <p>The built-in word lists are compiled for gameplay and are <span class="text-white font-bold">not an exact copy</span> of the Collins database, so a few words may be accepted or rejected differently. If a word is disputed, the Game Master can settle it using Collins.</p>
+                <p class="text-slate-400">WORD LADDER DUEL is an independent fan project. It is not affiliated with or endorsed by Collins, HarperCollins or Mattel. SCRABBLE&trade; is a trademark of Mattel.</p>
+            </div>
+            <div class="grid grid-cols-1 gap-2">
+                <a href="https://scrabble.collinsdictionary.com/word-lists/" target="_blank" rel="noopener noreferrer" class="py-2.5 text-center bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-orbitron font-bold text-xs rounded-xl">OFFICIAL COLLINS WORD LISTS <i class="fa-solid fa-arrow-up-right-from-square ml-1"></i></a>
+                <a href="https://scrabble.collinsdictionary.com/check/" target="_blank" rel="noopener noreferrer" class="py-2.5 text-center bg-slate-800 hover:bg-slate-700 border border-cyan-500/30 text-cyan-300 font-orbitron font-bold text-xs rounded-xl">CHECK A WORD ON COLLINS <i class="fa-solid fa-arrow-up-right-from-square ml-1"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ICON PICKER MODAL -->
+    <div id="icon-picker-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="glass-panel cyber-border rounded-3xl p-6 max-w-md w-full space-y-6">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-orbitron font-bold text-white text-base">SELECT GAMING EMBLEM</h3>
+                <button onclick="playSound('click'); toggleIconPickerModal();" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div id="emblem-options-grid" class="grid grid-cols-4 gap-3"></div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="w-full bg-slate-950 border-t border-cyan-500/20 py-4 px-6 text-center text-xs font-mono text-slate-400 space-y-1">
+        <div>Word Ladder Duels &bull; © 2026</div>
+        <div class="text-cyan-400/80 tracking-widest uppercase text-[10px]">Created by @_scrmbldgreg  |  Powered by ✨ Gemini AI</div>
+        <div class="pt-1">
+            <button onclick="playSound('click'); toggleDisclaimer();" class="px-3 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-cyan-500/50 text-[10px] text-slate-400 hover:text-cyan-300 rounded-lg transition-all">
+                <i class="fa-solid fa-circle-info mr-1"></i> Words based on Collins Scrabble Dictionary &middot; Disclaimer
+            </button>
+        </div>
+    </footer>
+
+    <!-- Firebase SDKs & App Engine -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCgjsT-twMIrKyfm5iLdH8eB9F7Y2lk_0c",
+            authDomain: "word-shift-battle-b5dce.firebaseapp.com",
+            projectId: "word-shift-battle-b5dce",
+            storageBucket: "word-shift-battle-b5dce.firebasestorage.app",
+            messagingSenderId: "119733706257",
+            appId: "1:119733706257:web:914e38f80637548a1b5bb0",
+            measurementId: "G-H5EGB52X8E"
+        };
+
+        let db = null;
+        try {
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            document.getElementById('conn-dot').className = "w-2 h-2 rounded-full bg-emerald-500";
+            document.getElementById('user-role-label').innerText = "Online";
+        } catch(e) {
+            document.getElementById('conn-dot').className = "w-2 h-2 rounded-full bg-cyan-400";
+            document.getElementById('user-role-label').innerText = "Local Simulation Mode";
+        }
+
+        const COMPREHENSIVE_WORDS = [
+            "aah","aal","aas","aba","abb","abs","aby","ace","ach","ack","act","add","ado","ads","adz","aff","aft","aga","age","ago","ags","aha","ahi","ahs","aia","aid","ail","aim","ain","air","ais","ait","aji","aka","ake","ala","alb","ale","all","alp","als","alt","alu","ama","ame","ami","amp","amu","ana","and","ane","ani","ann","ans","ant","any","ape","apo","app","apt","arb","arc","ard","are","arf","ark","arm","aro","ars","art","ary","ash","ask","asp","ass","ate","ats","att","aua","aue","auf","auk","ava","ave","avi","avo","awa","awe","awk","awl","awn","axe","aye","ays","ayu","azo",
+            "baa","bac","bad","bae","bag","bah","bal","bam","ban","bao","bap","bar","bas","bat","baw","bay","bed","bee","beg","bel","ben","bes","bet","bey","bez","bib","bid","big","bin","bio","bis","bit","biz","boa","bob","bod","bog","boh","boi","bok","bon","boo","bop","bor","bos","bot","bow","box","boy","bra","bro","brr","bru","bub","bud","bug","bum","bun","bur","bus","but","buy","bye","bys",
+            "caa","cab","cad","caf","cag","cal","cam","can","cap","car","cat","caw","cay","caz","cee","cel","cep","cha","che","chi","cid","cig","cis","cit","cly","cob","cod","cog","col","con","coo","cop","cor","cos","cot","cow","cox","coy","coz","cru","cry","cub","cud","cue","cum","cup","cur","cut","cuz","cwm",
+            "dab","dad","dae","dag","dah","dak","dal","dam","dan","dap","das","daw","day","deb","dee","def","deg","dei","del","den","dep","dev","dew","dex","dey","dib","did","die","dif","dig","dim","din","dip","dis","dit","div","dob","doc","dod","doe","dof","dog","doh","dol","dom","don","doo","dop","dor","dos","dot","dow","dox","doy","dry","dso","dub","dud","due","dug","duh","dui","dum","dun","duo","dup","dur","dux","dye","dzo",
+            "ean","ear","eas","eat","eau","ebb","ech","eco","ecu","edh","eds","eek","eel","een","eew","eff","efs","eft","egg","ego","ehs","eik","eke","eld","elf","elk","ell","elm","els","elt","eme","emo","ems","emu","end","ene","eng","ens","eon","era","ere","erf","erg","erk","erm","ern","err","ers","ess","est","eta","eth","euk","eve","evo","ewe","ewk","ewt","eww","exo","eye",
+            "faa","fab","fad","fae","fag","fah","fam","fan","fap","far","fas","fat","fav","faw","fax","fay","fed","fee","feg","feh","fem","fen","fer","fes","fet","feu","few","fey","fez","fib","fid","fie","fig","fil","fin","fir","fit","fix","fiz","flu","fly","fob","foe","fog","foh","fon","foo","fop","for","fou","fox","foy","fra","fro","fry","fub","fud","fug","fum","fun","fur",
+            "gab","gad","gae","gag","gak","gal","gam","gan","gap","gar","gas","gat","gau","gaw","gay","ged","gee","gel","gem","gen","geo","ger","get","gey","ghi","gib","gid","gie","gif","gig","gin","gio","gip","gis","git","gju","gnu","goa","gob","god","goe","gon","goo","gor","gos","got","gov","gox","grr","gub","gue","gul","gum","gun","gup","gur","gus","gut","guv","guy","gym","gyp",
+            "had","hae","hag","hah","haj","ham","han","hao","hap","has","hat","haw","hay","heh","hem","hen","hep","her","hes","het","hew","hex","hey","hic","hid","hie","him","hin","hip","his","hit","hmm","hoa","hob","hoc","hod","hoe","hog","hoh","hoi","hom","hon","hoo","hop","hos","hot","how","hox","hoy","hub","hue","hug","huh","hui","hum","hun","hup","hut","hye","hyp",
+            "ice","ich","ick","icy","ide","ids","iff","ifs","igg","ilk","ill","imp","ing","ink","inn","ins","int","ion","ios","ire","irk","ish","ism","iso","ita","its","ivy","iwi",
+            "jab","jag","jai","jak","jam","jap","jar","jaw","jay","jee","jet","jeu","jib","jig","jin","jiz","job","joe","jog","jol","jor","jot","jow","joy","jud","jug","jun","jus","jut",
+            "kab","kae","kaf","kai","kak","kam","kas","kat","kaw","kay","kea","keb","ked","kef","keg","ken","kep","ket","kex","key","khi","kid","kif","kin","kip","kir","kis","kit","koa","kob","koi","kon","kop","kor","kos","kow","kue","kye","kyu",
+            "lab","lac","lad","lag","lah","lam","lap","lar","las","lat","lav","law","lax","lay","lea","led","lee","leg","lei","lek","lep","let","leu","lev","lew","lex","ley","lib","lid","lie","lig","lin","lip","lis","lit","lob","loc","lod","log","loo","lop","lor","los","lot","lou","low","lox","loy","lud","lug","lum","lun","lur","luv","lux","luz","lye","lym",
+            "maa","mac","mad","mae","mag","mak","mal","mam","man","map","mar","mas","mat","maw","max","may","med","mee","meg","meh","mel","mem","men","mes","met","meu","mew","mho","mib","mic","mid","mig","mil","mim","mir","mis","mix","miz","mmm","mna","moa","mob","moc","mod","moe","mog","moi","mol","mom","mon","moo","mop","mor","mos","mot","mou","mow","moy","moz","mud","mug","mum","mun","mus","mut","mux","myc",
+            "nab","nae","nag","nah","nam","nan","nap","nas","nat","nav","naw","nay","neb","ned","nee","nef","neg","nek","nep","net","new","nib","nid","nie","nil","nim","nip","nis","nit","nix","nob","nod","nog","noh","nom","non","noo","nor","nos","not","now","nox","noy","nth","nub","nug","nun","nur","nus","nut","nye","nym","nys",
+            "oaf","oak","oar","oat","oba","obe","obi","obo","obs","oca","och","oda","odd","ode","ods","oes","off","oft","ohm","oho","ohs","oik","oil","ois","oka","oke","old","ole","olm","oma","oms","one","ono","ons","ony","oof","ooh","oom","oon","oop","oor","oos","oot","opa","ope","ops","opt","ora","orb","orc","ord","ore","orf","org","ors","ort","ose","oud","ouk","oup","our","ous","out","ova","owe","owl","own","owo","owt","oxo","oxy","oye","oys",
+            "pac","pad","pah","pak","pal","pam","pan","pap","par","pas","pat","pav","paw","pax","pay","pea","pec","ped","pee","peg","peh","pel","pen","pep","per","pes","pet","pew","phi","pho","pht","pia","pic","pie","pig","pin","pip","pir","pis","pit","piu","pix","plu","ply","poa","pod","poh","poi","pol","pom","poo","pop","pos","pot","pow","pox","poz","pre","pro","pry","psi","pst","pub","pud","pug","puh","pul","pun","pup","pur","pus","put","puy","pwn","pya","pye","pyx",
+            "qat","qin","qis","qua",
+            "rad","rag","rah","rai","raj","ram","ran","rap","ras","rat","rav","raw","rax","ray","reb","rec","red","ree","ref","reg","reh","rei","rem","ren","reo","rep","res","ret","rev","rew","rex","rez","rho","rhy","ria","rib","rid","rif","rig","rim","rin","rip","rit","riz","rob","roc","rod","roe","rok","rom","roo","rot","row","rub","ruc","rud","rue","rug","rum","run","rut","rya","rye","ryu",
+            "sab","sac","sad","sae","sag","sai","sal","sam","san","sap","sar","sat","sau","sav","saw","sax","say","saz","sea","sec","sed","see","seg","sei","sel","sen","ser","set","sev","sew","sex","sey","sez","sha","she","shh","sho","shy","sib","sic","sif","sig","sik","sim","sin","sip","sir","sis","sit","six","ska","ski","sky","sly","sma","sny","sob","soc","sod","sog","soh","sol","som","son","sop","sos","sot","sou","sov","sow","sox","soy","soz","spa","spy","sri","sty","sub","sud","sue","sug","sui","suk","sum","sun","sup","suq","sur","sus","swy","sye","syn",
+            "tab","tad","tae","tag","tai","taj","tak","tam","tan","tao","tap","tar","tas","tat","tau","tav","taw","tax","tay","tea","tec","ted","tee","tef","teg","tel","ten","tes","tet","tew","tex","the","tho","thy","tic","tid","tie","tig","tik","til","tin","tip","tis","tit","tix","tiz","toc","tod","toe","tog","tom","ton","too","top","tor","tot","tow","toy","try","tsk","tub","tug","tui","tum","tun","tup","tut","tux","twa","two","twp","tye","tyg",
+            "udo","uds","uey","ufo","ugh","ugs","uke","ule","ulu","ume","umm","ump","ums","umu","uni","uns","upo","ups","urb","urd","ure","urn","urp","use","uta","ute","uts","utu","uva","uwu",
+            "vac","vae","vag","van","var","vas","vat","vau","vav","vaw","vax","vee","veg","vet","vex","via","vid","vie","vig","vim","vin","vis","vly","voe","vog","vol","vom","vor","vow","vox","vug","vum",
+            "wab","wad","wae","wag","wai","wan","wap","war","was","wat","waw","wax","way","waz","web","wed","wee","wem","wen","wet","wex","wey","wha","who","why","wig","win","wis","wit","wiz","woe","wof","wok","won","woo","wop","wos","wot","wow","wox","wry","wud","wus","wuz","wye","wyn",
+            "xed","xis",
+            "yad","yae","yag","yah","yak","yam","yap","yar","yas","yaw","yay","yea","yeh","yen","yep","yer","yes","yet","yew","yex","yez","ygo","yin","yip","yob","yod","yok","yom","yon","you","yow","yug","yuk","yum","yup","yus",
+            "zag","zap","zas","zax","zea","zed","zee","zek","zel","zen","zep","zex","zho","zig","zin","zip","zit","ziz","zoa","zol","zoo","zos","zuz","zzz"
+        ];
+
+        const HARD_WORDS_POOL = COMPREHENSIVE_WORDS;
+        const WORDS_3 = new Set(COMPREHENSIVE_WORDS);
+        const DICT_DATA = {
+            4: "abas abba abbe abbr abed abet able ably abut aced aces acid actg acts acyl adds adit adjt advt aero aery afar agar aged agee ages agog agon ague ahem aide aids ails aims airs airt airy ajar akee akin alae alar alas alba albs alee ales alga alky ally alms aloe alow alps also alto alts alum amen amid amie amps amyl anas anat anew anil anim anis anna anoa anon anta ante anti ants aped apes apex apps arbs arch arcs area ares aria arid aril arks arms army arts arty arum aryl asks asps atom atop attn atty auks aunt aura auth auto aver avid avos avow away awed awes awls awns awry axed axes axil axis axle axon ayes ayin baas baba babe baby bach back bact bade bags baht bail bait bake bald bale balk ball balm banc band bane bang bani bank bans bant baps barb bard bare barf bark barm barn bars base bash bask bass bast bate bath bats batt baud bawd bawl bays bead beak beam bean bear beat beau beck beds beef been beep beer bees beet begs bell bels belt bema bend bent berg berk berm best beta bets bevy beys bias bibb bibl bibs bice bide bids bier biff bike bile bilk bill bind bine bins biog biol bios bird birl birr bisk bite bits bitt bize blab blag blah blat bleb bled blew blip blob bloc blog blot blow blue blur boar boas boat bobs bock bode bods body boga bogs boil bola bold bole boll bolo bolt bomb bond bone bong bonk bony boob book boom boon boor boos boot bops bora bore borg born bort bosh bosk boss both bots bott bout bowl bows boxy boys bozo brad brae brag bran bras brat braw bray bred bree brei brew brie brig brim brio bris brit bros brow brut btry bubo bubs buck buds buff bugs buhl buhr bulb bulk bull bumf bump bums bund bung bunk buns bunt buoy burg burl burn burp burr burs bury bush busk buss bust busy buts butt buys buzz byes byre byte cabs cade cadi cads cafe caff cage cain cake caky calf calk call calm calx came camp cams canc cane cans cant cape capo caps capt card care cark carl carp cars cart casa case cash cask cast cate cats caul caus cave cavy caws cays ceca cede cedi ceil cell celt cent cere cero cert cess chad cham chap char chat chaw chef chem chew chez chge chic chin chip chis chit choc chon chop chou chow chub chug chum cine cion cire cist cite city clad clam clan clap claw clay clef clem clew clii clip clit clix clod clog clop clos clot cloy club clue clvi clxi coal coat coax cobs coca coco coda code cods coed coff cogs coho coif coil coin coir coke cola cold cole coli coll cols colt coly coma comb come comm comp cone cong conk conn cons cont cony cook cool coom coop coos coot cope cops copy cord core corf cork corm corn corp corr cosh coss cost cote cots coup cove cowl cows coxa coze cozy crab crag cram crap craw cray cred crew crib crim crit crop crow crud crus crux cube cubs cuds cued cues cuff cuke cull culm cult cums cups curb curd cure curl curs curt cusk cusp cuss cute cuts cyan cyma cyme cyst czar dabs dace dada dado dads daff daft dago dags dahl dahs dais daks dale dame damn damp dams dang dank dare darg dark darn dart dash data date dato daub dawn daws days daze dded dead deaf deal dean dear debs debt deck decl deco deed deem deep deer deft defy deil dele deli dell deme demo dent deny derv desk deva dews dewy dhow diag dial diam dibs dice dict dido died dies diet diff digs dill dime dims dine ding dink dins dint dipl dips dire dirk dirt disc dish disk dist dits ditz diva dive dobs dock docs dodo doer does doff doge dogs doit dole doll dols dolt dome dona done dong dons doom door dopa dope dora dork dorm dorp dory dose dosh doss dost dote dots dour dove down doxy doze dozy drab drag dram drat draw dray dree dreg drew drip drop drub drug drum drys duad dual dubs duce duck duct dude duds duel dues duet duff duke dull duly duma dumb dump dune dung dunk duns dunt duos dupe dusk dust duty dyad dyed dyer dyes dyke dyne each earl earn ears ease east easy eats eave ebon eccl ecol econ ecus edit eels effs efts eggs egos eide eked ekes elan elem elev elks ells elms else emfs emir emit emos emus encl ency enol enow envy eons epos eras ergo ergs errs ersh erst esse etas etch even ever eves ewer ewes exch excl exec exes exit exon eyas eyed eyer eyes eyra eyre face fact fade fado fads faff fail fain fair fake fall fame fane fang fans fard fare farl farm faro fart fash fast fate fats faun faux fave fawn fays faze feal fear feat feck feds feed feel feer fees feet fell felt feme fend fens fern fess fest feta fete feud fiat fibs fico fief fife figs fila file fill film filo fils find fine fink fino fins fire firm firn firs fisc fish fist fits five fizz flab flag flak flam flan flap flat flaw flax flay flea fled flee flew flex fley flip flit floc floe flog flop flor flow flub flue flux foal foam fobs foes fogs fogy foil foin fold folk foll fond font food fool foot fops fora forb ford fore fork form fort foul four fowl foxy frae frag frap frat fray free freq fret frig frit froe frog from frow frug fuel fugs full fume fums fumy fund funk furl furn furs fury fuse fuss futz fuzz fyke fyrd gabs gaby gads gaff gaga gags gain gait gala gale gall gals gamb game gamp gamy gang gape gaps garb gars gash gasp gate gats gaud gaur gave gawd gawk gawp gays gaze gean gear geed geek gees geld gels gems gene gent genu geod geog geol geom germ gest gets geum ghat ghee gibe gift gigs gild gill gilt gimp gink gins gird girl giro girt gist gite gits give glad glam glee glen gley glia glib glim glob glom glop glow glue glum glut gnat gnaw gnus goad goal goat gobo gobs goby gods goer goes gold golf gone gong gonk good goof goon goop gore gorp gory gosh gout govt gowk gown goys grab grad gram gran gray gree grep grew grid grig grim grin grip grit grog grok grot grow grub grue grum guan guar guck guff guib gula gulf gull gulp gums gunk guns gush gust guts guvs guys gyms gyps gyre gyro gyve haaf haar hack hade haft hags haik hail hair hake haku hale half hall halm halo halt hame hams hand hang hank hard hare hark harl harm harp hart hash hasp hast hate hats haul have hawk haws hays haze hazy head heal heap hear heat heck heed heel heft heir held hell helm help heme hemp hems hent herb herd here herl herm hern hero herp hers hest hews hick hide hied hies high hike hila hill hilt hims hind hing hins hint hips hire hiss hist hits hive hiya hoar hoax hobo hobs hock hods hoed hoer hoes hogs hoke hold hole holm holp hols holt holy home homo hone hong honk hons hood hoof hook hoop hoot hope hops hora horn hort hose hosp host hots hour hove howl hows hoys hubs hued hues huff huge hugs hula hulk hull hump hums hung hunk hunt hurl hurt hush husk huts hwan hyla hype hypo iamb ibex ibid ibis iced ices icky icon idea idem ides idle idly ilea ilex ilia ilks ills imit impf impi imps impv inch incl incr incs init inky inly inns inst inti invt ions iota iris irks iron isle itch item iwis ixia jabs jack jade jags jail jamb jams jane jape jarl jars jato java jaws jays jazz jean jeep jeer jeez jell jerk jess jest jets jibe jibs jiff jigs jill jilt jink jinn jinx jiva jive jivy jobs jock jogs john join joke jolt jook josh joss jota jots jowl joys juba jube judo jugs juke jump junk jura jury just jute juts kadi kaif kail kain kaka kaki kale kali kame kami kana kaon kaph kart kava kayo keas keck keef keek keel keen keep kegs kelp kelt keno kens kent kepi kept kerf kern kero keto keys khan khat kibe kick kids kief kier kill kiln kilo kilt kina kind kine king kink kino kips kish kiss kist kite kith kits kiva knap knar knee knew knit knob knop knot know knur koan kobo kobs koel kohl kola kolo kook koph kors koto kris kudo kudu kuna kyat kyle labs lace lack lacy lade lads lady lags laic laid lain lair lake lakh laky lama lamb lame lamp lams land lane lang lank laps lard lari lark lase lash lass last late lath lati lats laud lava lave lavs lawn laws lays laze lazy lead leaf leak leal lean leap leas lech lect leek leer lees leet left legs lehr leis leks lend leno lens lent less lest lets leva levy lewd leys lice lick lido lids lied lief lien lies lieu life lift like lilo lilt lily limb lime limn limo limp limy line ling link linn lino lint liny lion lips lira lire lisp list lite live load loaf loam loan lobe lobo lobs loci lock loco lode loft loge logo logs logy loin loll lone long look loom loon loop loos loot lope lops lord lore lorn lory lose loss lost lota loti lots loud loup lour lout love lows luau lube luce luck ludo lues luff luge lugs lull lulu lump lune lung lunk lure lurk lush lust lute luxe lyre lyse mace mach macs made mads mage magi mags maid mail maim main make mako male mall malm malt mama mams mana mane mans many maps mara marc mare marg mark marl mars mart masc mash mask mass mast mate mats maul maun maws maxi maya mayo maze mazy mdse mead meal mean meas meat mech meed meek meet mega megs meld melt meme memo mems mend mene menu mere mesa mesh mess meta mete mewl mews mhos mica mice mick mics midi mien miff mike mild mile milf milk mill milo mils milt mime mind mine mini mink mint minx mire mirk miry misc miso miss mist mite mitt mize moan moas moat mobs mock mode mods moil mojo moke mola mold mole moll mols molt moly moms mong monk mono mood moon moor moos moot mope mops mora more morn mort mosh moss most mote moth mots moue move mows moxa mtge much muck muff mugs mule mull mump mung muon mure murk muse mush musk muss must mute muts mutt muzz myna myth nabs naff nags naif nail name naos nape naps narc nard nark nary natl naut nave navy nays neap near neat nebs neck need neon nerd ness nest nets neut news newt next nibs nice nick nide niff nigh nine nipa nips nits nobs nock node nodi nods noel noes nogs noil nolo noma none nook noon nope norm nose nosh nosy note noun nous nova nowt nubs nude nuke null numb nuns nuts oafs oaks oars oast oath oats obdt obis obit odds odea odes offs ogee ogle ogre oiks oils oily oink oleo oles olid olio omen omer omit ones only onus oohs oops ooze oozy oped open opes opts opus orbs orca orch orcs ores orig orle orts oses ouch ours oust outs oven over owed owes owls owns oyer oyez pace pack pact pacy pads page paid pail pain pair pale pall palm palp pals paly pane pang pans pant papa paps para pard pare park parr pars part pase pash pass past pate path pats pave pawl pawn paws pays payt peag peak peal pean pear peas peat peck pecs peed peek peel peen peep peer pees pegs peke pelf pelt pend peng pent peon peps pere peri perk perm pert perv peso pest pets pews phat phew phil phis phiz phon phot phys pica pice pick pics pied pier pies piet pigs pika pike pile pili pill pily pine ping pink pins pint pipe pips pirn pish piso pita pith pits pity pizz plan plat play plea pleb plod plop plot plow ploy plug plum plur plus pock poco pods poem poet pogo pogy poke poky pole poll polo pols poly pome pomp poms pond pone pong pons pony pood poof pooh pool poon poop poor poos pope pops pore pork port pose posh poss post posy pots pouf pour pout pram prat prau pray pred pref prem prep pres pret prey prig prim priv proa prob prod prof prog prom prop pros prov prow psia psid psis publ pubs puca puce puck puds puff pugs puke pula pule puli pull pulp puls puma pump pung punk puns punt puny pupa pups pure purl purr push puss puts putt putz pyas pyre qadi qoph quad quag quai quay ques quid quin quip quit quiz quod quot race rack racy rads raff raft raga rage ragi rags raid rail rain rake raki rale rall ramp rams rand rang rank rant raps rapt rare rash rasp rata rate rath rats rave rays raze razz real ream reap rear rect redd rede redo reds reed reef reek reel refl refs rein rend rent repp reps rest retd rete revs rhea rheo rhet rhos rial ribs rice rich rick ride rids riel rife riff rift rigs rile rill rime rims rimy rind ring rink riot ripe rips rise risk rite rive road roam roan roar robe robs rock rocs rode rods roes roil role roll romp rood roof rook room root rope ropy rose rosy rota rote rotl rots roue roup rout roux rove rows rube rubs ruby ruck rudd rude rued rues ruff rugs ruin rule rump rums rune rung runs runt ruse rush rusk rust ruth ruts ryas sack sacs safe saga sage sago sags said sail sain sake sale salt same sand sane sang sank sans saps sard sari sash sass sate sati save saws says scab scad scag scam scan scar scat scop scot scow scud scum scup scut seal seam sear seas seat sech secs sect secy seed seek seel seem seen seep seer sees self sell send sene sent sept sere serf seta sets sett sewn sews sext sexy shad shag shah sham shaw shay shed sher shes shew shim shin ship shiv shmo shod shoe shoo shop shot show shul shun shut sibs sick sics side sift sigh sign sika sike sild silk sill silo silt sima simp sims sine sing sinh sink sins sips sire sirs site sits situ size skat skeg skep skew skid skim skin skip skis skit slab slag slam slap slat slaw slay sled slew slid slim slip slit slob sloe slog slop slot slow slub slue slug slum slur smew smog smug smut snag snap snip snit snob snog snot snow snub snug soak soap soar soba sobs sock soda sods sofa soft soil soke sola sold sole solo sols soma some sone song sons soon soot soph sops sora sorb sore sori sorn sort sots souk soul soup sour sous sown sows spae spam span spar spas spat spay spec sped spew spin spit spiv spot spry spud spue spun spur stab stag star stat stay stem step ster stet stew stge stir stoa stob stop stor stow stub stud stun subj subs such suck sudd suds sued suer sues suet suit sulk sumo sump sums sung sunk sunn suns supp sups supt sura surd sure surf surg surv suss swab swag swam swan swap swat sway swig swim swiz swot swum syce sync synd syne syst tabs tace tach tack taco tact tads tael tags tail tain taka take tala talc tale tali talk tall tame tamp tams tana tang tanh tank tans tape taps tare tarn taro tarp tars tart task tass tats taus taut taws taxa taxi teak teal team tear teas teat tech teds teed teem teen tees tell tels temp tend tens tent terf term tern terr test teth text than thar that thaw thee them then thew they thin this thou thru thud thug thus tick tics tide tidy tied tier ties tiff tiki tile till tilt time tine ting tins tint tiny tips tire titi tizz toad tody toea toed toes toff toft tofu toga togs toil toke tola told tole toll tolu tomb tome toms tone tong tons tony took tool toot tope topi tops tore tori torn torr tors tort tosh toss tote tots tour tout town tows toys trad tram trap tray tree trek tres tret trey trig trim trio trip trod tron trot trow troy true trug ttys tuba tube tubs tuck tufa tuff tuft tugs tums tuna tune tuns turd turf turn tush tusk tuts tutu twas twee twig twin twit twos tyke type typo typw tyro umps upas urea urns urus used user uses uvea vacs vagi vail vain vair vale vamp vane vang vans vape vara vars vary vasa vase vast vats vatu veal veep veer veil vein vela veld vena vend vent verb vert very vest veto vets vial vibe vice vide vied vier vies view vile vina vine vino viol visa vise vita viva voes vole vols volt vote vows wack wade wadi wads waft wage wags waif wail wain wait wake wale walk wall wame wand wane want ward ware warm warn warp wars wart wary wash wasp wast watt wave wavy waws waxy ways weak weal wean wear webs weds weed week ween weep weer wees weft weir weld well welt wend went wept were wert west wets wham whap what whee when whet whew whey whim whin whip whir whit whiz whoa whom whop whup whys wick wide wife wigs wiki wild wile will wilt wily wimp wind wine wing wink wino wins winy wipe wire wiry wise wish wisp wist wite with wits wive wkly woad woes wogs woke woks wold wolf womb wonk wont wood woof wool woos wops word wore work worm worn wort wove wows wrap wren writ wuss wynd xref yaks yams yang yank yaps yard yare yarn yawl yawn yawp yaws yeah yean year yeas yeld yell yelp yens yeps yest yews yids yipe yips ylem yobs yoga yogh yogi yoke yolk yoni yore york your yous yowl yuan yuck yuks yule yups yurt ywis zany zaps zarf zeal zeds zees zero zest zeta zigs zinc zine zing zips ziti zits zone zonk zool zoom zoon zoos",
+            5: "abaca aback abase abash abate abele abide abode abort about above abuse ached aches acing acini acmes acned acorn acred acres acrid acted acute added adder adobe adore adorn adown aedes afire afore after agape agate agave agger agile aging agone agony aided aider aides ailed aimed aired airts aitch alack alarm alary alate alder algae algal alias aloes alone along aloud altar alter alums amice amide amigo amine amino among amuse anele angel anger angle anile anils anima anime anise ankle anode anole anted antes antic antiq antis aorta apace apart apeak aphid aphis aping aport apses apsis apter arced areal areas areca arena argal argil argol argon argot arias arils arise armed armet arose arras array arris arsed arsis arson arums ashed ashes aside asked asker askew aspen asper asses asset aster astir atilt atoms atomy atone atony atria atrip attar attic auger augur aunts aural aurar auras awake award aware awash awing awned awoke axils axing azide azine azole azote baaed babas babel babes babul backs bacon badge badly bagel baggy bahts bails bairn baits baked baker bakes balas balds baldy baled baler bales balks balky balls bally balms balmy banal bands bandy banes bangs banks banns barbs barde bards bared barer bares barfs barge baric barit barks barms barmy barns baron barre barye basal based baser bases basic basil basin basis basks baste batch bated bates bathe baths baton batty bauds bawds bawdy bawls bayed beach beads beady beaks beams beamy beano beans beard bears beast beats beaus beaut becks bedel bedew beech beefs beefy beeps beers beery beets began begat beget begin begot begum begun being belay belch belie belle bells belly belts bemas bench bends bendy benne benny bents beret bergs berks berms berry berth beset besom besot bests betas betel beths bevel bezel bialy biddy bides bidet biers biffs bight bigot biked biker bikes bilbo bilge bilks bills billy bimbo binal binds bines binge bingo biped bipod birch birds birls birrs birth bises bison biter bites bitts bitty blabs black blade blags blahs blain blame bland blank blare blase blast blate blats blaze bleak blear bleat blebs bleed bleep blend bless blind bling blini blink blips bliss bloat blobs block blocs blogs bloke blond blood bloom bloop blots blown blows blowy blued bluer blues bluet bluey bluff blunt blurb blurs blurt blush board boars boart boast boats bobby boded bodes bodge boffo bogey boggy bogie bogle bogon bogus boils boink bolas boles bolls bolos bolts bolus bombe bombs bonce bonds boned boner bones bongo bongs bonks bonne bonny bonus bonze boobs booby booed books booms boong boons boors boost booth boots booty booze boozy bored borer bores boric borne boron bosky bosom boson bossy botch botel bothy bough boule bound bouse bouts bowed bowel bower bowls bowse boxed boxer boxes bozos brace brach bract brads braes brags braid brail brain brake brand brant brash brass brats brave bravo brawl brawn brays braze bread break bream brede breed brent breve brews bribe brick bride brief brier brigs brill brims brine bring brink briny brisk brits broad broch brock broil broke brood brook broom brose broth brown brows bruin bruit brume brunt brush brute bubal bucko bucks buddy budge buffo buffs buggy bugle buhls build built bulbs bulge bulgy bulks bulky bulla bulls bully bumph bumps bumpy bunch bunco bungs bunks bunny bunts burbs buret burgh burgs burka burke burls burly burns burnt burps burro burrs burry bursa burse burst busby bused buses bushy busks busts busty butch butte butts butty byres bytes cabal cabby caber cabin cable cadet cadge cadre cafes caffs caged cager cages cagey caird cairn caked cakes calks calla calls calms calve camel cameo campo camps campy canal candy caned caner canes canna canny canoe canon canso canst canto cants canty caped caper capes capon capos carat carbs cards cared carer cares caret cargo carks carny carpi carps carry carse carte carts carve cased cases casks caste casts catch cater catty caulk cauls cause caved caver caves cawed cease cecal cedar ceded ceder cedes cedis cella cello cells cense cento cents cered ceres ceria ceric ceros certs cesar cesta chads chafe chaff chain chair champ chant chaos chape chaps chard chare charm charr chars chart chary chase chasm chats chaws cheap cheat check cheek cheep cheer chefs chert chess chest chevy chews chewy chiao chick chico chide child chili chill chimb chime chimp china chine ching chink chino chins chips chirk chirm chirp chirr chits chive chivy chock chocs choir choke choli chomp chook chops chord chore chose chows chubs chuck chufa chuff chugs chump chums chunk churl churn churr chyle chyme ciaos cider cinch cited cites civet clack clade clamp clams clang clank clans claps claro clary clash clasp class clave clavi claws clays clean clear cleat cleek clefs cleft clepe clerk clews click climb clime cline cling clink clips clits cloak clock clods clogs clomb clomp clone clonk clops close cloth clots cloud clout clove clown cloys clubs cluck clued clues clump clung clunk clvii clxii clxiv clxix clxvi coach coact coals coaly coast coati coats cobia coble cobra cocks cocky cocoa cocos codas coded coder codes codex codon coeds cogon cohos coifs coils coins coirs coked cokes colas colds coles coley colic colly colon color colts comas combe combo combs comer comes comet comic compo comps conch condo conga conic conns contd conte conto cooed cooee cooks cools coomb coons coops coots copal copay coped coper copes copra copse coral cords cored corer cores coria corks corky corms corns cornu corny corps corse cosec coset costa coste costs cotes cotta couch cough could count coupe coups court couth coven cover coves covet covey covin cowed cower cowls coxed coxes coyer coyly cozen craal crabs crack craft crags crake cramp crams crane crank crape craps crapy crash crass crate crave crawl craws crays craze crazy creak cream creed creek creel creep creme crepe crept cress crest crews cribs crick cried crier cries crime crimp crine crisp croak crock croft crone cronk crony crook croon crops crore cross croup crowd crown crows croze cruck crude cruel cruet cruft crumb crump cruse crush crust crypt cryst cubby cubeb cubed cuber cubes cubic cubit cuddy cuffs cuing cukes culch culet culex culls cully culms cults cumin cunts curbs curch curds curdy cured curer cures curet curia curie curio curls curly curry curse curve curvy cusec cushy cusks cusps cutch cuter cutey cutie cutin cutis cutty cymar cymas cymes cynic cysts czars daces dacha daddy daily dairy daisy dales dally dames damns damps dance dandy dangs dared darer dares daric darky darns darts dated dater dates daube daubs daunt dawns dazed dazes dding deals dealt dears deary death debit debts debus debut decaf decal decay decks decor decoy dedal deems deeps deist delay delis dells delve demit denar dense dents depth derby derry desks deter deuce dewan dhole dhows dials diary diced dicer dices dicey dicks diets diffs dight digit diked dikes dills dilly dimer dimes dimly dinar dined diner dines dinge dingo dingy dinky dints dippy direr dirge dirks dirty disks ditch ditsy ditto ditty divan divas dived diver dives diwan dizen dizzy dobby dobla dobra dobro docks dodge dodgy doers doffs doges doggo doggy dogie doily doing dolce doled doles dolls dolly dolor dolts domed domes donas donee donga dongs donna donne donor dooms doors doozy doped doper dopes dopey dorks dorky dorms dorty dosed doses doted doter dotes dotty douce dough douse doves dowdy dowel dower dowie downs downy dowry dowse doyen dozed dozen dozer dozes drabs draff draft drags drain drake drama drams drank drape drawl drawn draws drays dread dream drear dregs dress dried drier dries drift drill drink drips drive droll drone drool droop drops dross drove drown drubs drugs drums drunk drupe druse dryad dryer duads duals ducal ducat duchy ducks ducky ducts duded dudes duels duets duffs dukes dulls dully dulse dummy dumps dumpy dunce dunes dungs dunks duped duper dupes duppy durst dusky dusts dusty dutch dwell dwelt dyads dyers dying dykes dynes eager eared earls early earns eased easel eases eaten eater eaves edged edger edges egged egger eider eidos eight eland elate elder elide elite elope elude elute elver elves emote enate enter epics epode erase ergot erode erose erred esker ester ether etude evite exude fable faced facer faces facet facts faddy faded fader fades fadge faena faffs fails faint fairs fairy faith faked faker fakes fakir falls false famed fancy fango fangs fanny fanon faqir farad farce farci farcy fared farer fares farms farts fasts fatal fated fates fatly fatty faugh fault fauna fauns faves favor favus fawns faxed faxes fayer fazed fazes fears feast feats fecal feces feeds feels feint felid fella fells felly felts femme fence fends fenny feral feria ferns ferny ferry fests fetal fetch feted fetes fetid fetus feuds fever fewer feyly fiats fiber ficus fidge fiery fifer fifes fifth fifty fight filar filch filed filer files filet fills filly films filmy filth final finch finds fined finer fines finis finks finny fired firer fires firms firry firth fiscs fists fitch fitly fiver fives fixed fixer fixes fizzy flack flags flail flair flake flaky flame flank flans flaps flare flash flask flats flaws flawy flays fleam fleas fleck fleer flees fleet flesh flews flick flied flier flies fling flint flips flirt flite flits float flock flocs floes flogs flong flood floor flops flora flory floss flour flout flown flows flubs flues fluff fluke fluky flume flump flung flunk fluor flush flute fluty flyte foals foams foamy focal focus foggy foils foist folds folia folic folie folio folks folly fonts foods fools foots footy foray forby force fordo fords fores forge forgo forks forme forms forte forts forty fossa fosse fouls found fount fours fowls foxed foxes foyer frack frags frail frame franc frank fraps frats frays freak freed freer frees fremd frena fresh frets fried fries frigs frill frisk frith fritz frize frizz frock frogs frond frons front frore frosh frost froth frown froze fruit frump fryer fubsy fucks fucus fudge fuels fugal fuggy fulls fully fumed fumes funds fungi fungo funks funky funny furls furry furze furzy fused fusee fuses fussy fusty fuzzy gabby gable gaffe gaffs gaily gains gaits galah galas galea gales galls gamba gamed gamer games gamma gammy gamps gangs gaped gapes gappy garbs gases gasps gassy gated gater gates gator gauds gaudy gauge gaunt gaurs gauss gauze gauzy gavel gawks gawky gawps gayer gazed gazer gazes geans gears geeks geeky geese geest gelds gelid gemma gemmy genes genet genic genie genii genip genit genre genro gents genus geoid germs germy ghats ghees giant gibed giber gibes giddy gifts gigot gilds gills gilts gimps gimpy ginny girds girls girly giros girth girts gites given giver gives glace glade glads glair gland glans glare glary glass glaze gleam glean glebe glede gleet glias glide glint gloam gloat globe globs gloms gloom glory gloss glove glows gloze glued glues gluey glume gluts gnarl gnats gnaws goads goals goats godly goers gofer going golds golfs golly gonad goner gongs gonks gonna goods goody gooey goofs goofy gooks goons goose goosy goral gored gores gorge gorps gorse goths gotta gouge gouty gowan gowns grabs grace grade grads graft grail grain grams grand grans grant grape graph grasp grass grate grave gravy grays graze great grebe greed green greet greps gride grids grief grift grill grime grimy grind grins gripe grips grist grith grits groan groat groin groks groom grope gross grosz grots group grout grove growl grown grows grubs gruel grues grume grump grunt guaco guano guans guard guars gucks guess guest guide guild guile guilt guise gulag gulas gulch gules gulfs gulls gully gulps gumma gummy gunge gungy gunky gunny guppy gurge gurus gushy gussy gusto gusts gusty gutsy gutta gutty gyral gyres gyron gyros gyrus gyved gyves hacks hades hafts hails hairs hairy hajes hakes haled haler hales halls halms halon halos halts halve hames hammy hance hands handy hangs hanks haply happy hards hardy hared harem hares harks harms harps harpy harry harsh harts hasps haste hasty hatch hated hater hates haugh haulm hauls haunt haven haver haves hawed hawks hayed hazed hazel hazer hazes heads heady heals heaps heard hears heart heath heats heave heavy heder hedge heeds heels hefts hefty heirs heist hello hells helms helps helve hemic hemin hence henge henna herbs herby herds heres heths hewed hewer hexad hexed hexer hexes hicks hided hider hides highs hight hiked hiker hikes hills hilly hilts hinds hinge hinny hints hippo hippy hired hirer hires hitch hived hives hoard hoars hoary hobby hobos hocks hocus hoers hogan hoist hoked hokes hokey holds holed holes holey holly homed homer homes homey homos honed honer hones honey honks honky honor hooch hoods hooey hoofs hooks hooky hoops hoots hoped hopes horah horal horas horde horme horns horny horol horse horst hosed hoses hosta hosts hotel hotly hough hound houri hours house hovel hover howdy howls hubby huffs huffy huger hulas hulks hulky hulls humic humid humph humps humpy humus hunch hunks hunky hunts hurds hurls hurry hurst hurts husks husky hussy hutch hying hyped hyper hypes hypos iambi iambs icing icons imide imine indic indie induc infer ingle inkle inner intel inter intis iodic ionic iotas irade irate irons irony items jacks jaded jades jaggy jails jakes jambs jammy japed japer japes jaunt jawed jeans jebel jeeps jeers jello jells jelly jemmy jenny jerks jerky jerry jests jetty jewel jibed jibes jiffs jiffy jilts jimmy jingo jinks jived jiver jives jivey jocko jocks johns joins joint joist joked joker jokes jokey jolly jolts jolty joule joust jowls jowly joyed judge jugal jumps jumpy junco junks jural jurat jurel jutty kails kapok karat karst karts kasha kavas kedge keels keens keeps kelly kente ketch kevel khans kibes kicks kicky kikes kills kilns kilos kilts kinas kinda kinds kines kings kinin kinks kinky kinos kited kites kitty klong knack knaps knits knobs knock knots knout known knows koans kobos kolas kooks kooky koses kotos kraal kraft krait kraut krill krona krone kroon kudos kudus kurus label laced lacer laces lacks laded laden lades lagan lager laird lairs laker lakes lakhs lamas lambs lamed lamer lames lamps lance lands lanes lanky lapel larch lards lardy lares large largo larks lased laser lases lasts latch lated later latex lathe lathi laths lathy latke latte lauds laugh lavas laved laver laves lawns laxer layer lazed lazes leach leads leafs leafy leaks leaky leans leaps leapt learn lease leash least leave ledge leech leeks leers leery lefts lefty legal leges leggy lemma lemme lends lenis lento leper lepta lethe levee level lever lewis lexer lexis libel liber licks lidos liege lifer lifts ligan liger light liked liken liker likes lilos lilts limbo limbs limed limen limes limey limns limos limps lindy lined linen liner lines lingo linin links lints linty lions lipid lippy lisps lists litas liter lithe litho lived liven liver lives livid loach loads loafs loams loamy loans loath lobby lobed lobes local locks locos locum locus loden lodes lodge lofts lofty logan loges loggy logia logic login logon logos loins lolls lolly loner longe longs looby looks looms loons loony loops loopy loose loots loped loper lopes loppy loran lords loris lorry losel loser loses lotas lotic lotto lotus lough louis loupe lours louse lousy louts loved lover loves lovey lowed lower lowly loyal luaus lubed lubes lucid lucks lucky luffa luffs luged luges lulls lulus lumen lumps lumpy lunch lunge lungi lungs lupus lurch lured lures lurex lurgy lurid lurks lushy lusts lusty lutes luxes lying lynch lyres lyric lyses lysin lysis lytic maced maces madly mafia mages magic magma magus maids mails maims mains major maker makes makos malar males malls malts malty mamas mamba mambo mamey mamma mammy manas manat maned manes manga mange mango mangy mania manic manky manly manna manor manse manta maras march marcs mares marge maria marka marks marls marly marry marsh marts maser masks massy masts match mated mater mates matey matin matte mauls maund maven mavis maxed maxes maxim maxis mayor mazer mazes meals mealy means meant meany meats meaty medal media medic meets meiny melds melic melts memes memos mends menus mercy meres merge merle merry mesic messy metal meted meter metes meths metic metis mewed mewls micks middy midge midis miffs miffy might miked mikes milch miler miles milfs milks milky mills milos milts mimed mimer mimes mince minds mined miner mines mingy minim minis minke minks minor mints minty minus mired mires mirth miser missy mists misty miter mites mitis mitts mixed mixer mixes moans moats mocks modal model modem modes moggy moils moist mokes molal molar molas molds moldy moles molls molly molts mommy monad monas monde money mongo monks monte month mooch moods moody mooed moons moony moors moose moots moped moper mopes mopey moral moray morel mores morns moron morse mosey mossy motel motes motet moths mothy motte motto moues mound mount mouse mousy mouth moved mover moves mowed mower mucks mucky mucus muddy muffs muggy mulch mulct mules muley mulla mulls mummy mumps munch mungs muons mural murex murks murky mused muser muses mushy music musky mussy musts musty muted muter mutes mutts muzzy mynas myths naifs nails naked naker named namer names nance nancy nanny napes nappe nappy narcs nards nares naris narky nasal nasty natal natch nates natty naval navar navel naves navvy neaps nears neath necks needs needy nelly neper neral nerds nerdy nerve nervy nests netty never newel newer newly newsy newts nicer nicks nidus niffy nifty night nines ninny nippy nisus niter nitty nival nixed nixes nobby noble nobly nocks nodal noddy nodes nodus noise noisy nonce nones nonet nooks nooky noons noose noria norms nosed noses notch noted notes nouns novel nubby nuder nudes nudge nuked nukes nulls numen nurse nutty oared oases oasis oasts oaths ocher ocker odder ogeed ogled ogler ogles ogres oiled oiler oinks older ontic oohed oozed oozes opine oping opted optic orang orate order oread ornis orris other ottar otter ounce ousts outed outer outta ovate ovine owing owned owner paced pacer paces pacey pacha packs pacts paddy padre paean paeon pagan paged pager pages pails pains paint pairs paled paleo paler pales palls pally palms palmy palsy panda paned panel panes panga pangs panic panne pansy panto pants papal papas paper pappy paras parch pared parer pares pareu parka parks parky parrs parry parse parts party parve pasha pashm passe pasta paste pasts pasty patch pates paths patin patio patly patsy patty pause pavan paved paves pavid pavis pawed pawls pawns paxes payed payee payer peace peach peags peaks peaky peals peans pearl pears peart peaty pecks pedal peeks peels peens peeps peers peeve pekes pelts penal pence pends penis penna penne penni penny peons peony peppy perch peril peris perks perky perms perry perse pervs pesky pesos pesto pests pesty petal peter petty phage phase pheon phish phone phons phony photo phots phyla phyle picks picky piers pieta piety pikas piked piker pikes pilch piled pilei piles pills pimps pinch pined pines piney pinko pinks pinna pinny pinta pinto pints piped piper pipes piste pitas pitch piths pithy pitta place plage plaid plain plait plane plank plans plant plash plasm plate plats platy playa plays plaza plead pleas pleat plebe plebs plied plier plies ploce plods plonk plops plots plows ploys pluck plugs plumb plume plump plums plumy plunk plush poach pocks pocky poddy poems poets pogey point poise poked poker pokes pokey polar poled poler poles polio polis polit polls polyp polys pomes pommy ponce poncy ponds pones pongs pooch poods pooed poofs poohs pools poons poops popes poppa poppy porch pored porer pores porgy porky ports posed poser poses posit posse posts potto potty pouch poufs pound pours pouts pouty power poxes prams prana prang prank prase prate prats prawn prays preen preps presa press prexy preys price prick pride pried prier pries prigs prime primo primp prink print prion prior prize probe prods profs prole promo prong propr props prose prosy prove prowl prows proxy prude prune pubes pubic pubis pucka pucks pudgy puffs puffy puked pukes pukka pulas puled puler pules pulls pulps pulpy pulse pumas pumps punch pungs pungy punks punts pupae pupal pupil puppy puree purer purge purls purrs purse pursy pushy pussy putto putts putty pwned pyres pyxes quack quads quant quark quart quash quasi quass quays quell quest quick quids quiet quill quilt quine quins quint quips quipu quire quirk quirt quite quits quota quote rabid raced racer races racks racon radii radio radix radon rafts ragas raged rages ragis raids rails rains rainy rajes raked raker rakes rales rally ramps rance ranch randy ranee range rangy ranks rants raped raper rapes rapid rared rarer rares rasps raspy ratal ratan rated ratel rater rates rathe ratio ratty raved ravel raven raver raves ravin rawer rayon razed razee razes reach react ready realm reals reams reaps rears reave rebec rebel rebid recon redan reedy reefs reeks reeky reels reest reeve refer refix regal regex reive relax relay relic remex remit remix renal rends rents repel repps rests retch revel revet rhino rhomb rhumb rhyme rials riant riced ricer rices ricks rider rides ridge ridgy riels rifer riffs rifle rifts right riled riles rille rills rimed rimes rinds rinks riots ripen riper risen riser rises risks risky rites rival rived river rives rivet riyal roach roads roams roans roars roast robed robes roble rocks rocky roger rogue roils roily roles rolls roman romps ronde rondo roods roofs rooks rooky rooms roomy roose roost roots roped roper ropes roque roses rotas rotls roues rouge rough round rouse roust route routs roved rover roves rowan rowdy rowed rowel rower royal rubel rubes ruble rucks rudds ruddy ruder ruffs ruing ruins ruled ruler rules rumal rummy rumps runes rungs runic runny runts runty rural ruses rushy rusks rusts rusty rutty saber sabin sable sacks sades sadly safer safes sagas sager sages saggy sails saint saith saker sakes salep sales sally salol salon salts salty salve salvo samba sambo sames samey sands sandy saner sapid sapor sappy sards sarge saris sarky saros sasin sassy sated satem sates satin sauce saucy sauna saury saute saved saver saves savor savoy savvy sawed sawer saxes sayer scabs scads scags scald scale scalp scaly scamp scams scans scant scape scare scarf scarp scars scary scats scend scene scent scoff scold scone scoop scoot scope score scorn scour scout scowl scows scrag scram scrap scree screw scrim scrip scrod scrog scrub scrum scuba scudo scuds scuff scull sculp scums scups scurf scuta scute scuts seals seams seamy sears seats sebum sects sedan sedge sedgy sedum seeds seedy seeks seels seems seeps seers seine seise seism seize sells semen sends senna sense sente sepia septa septs serer serfs serge serow serum serve servo setts seven sever sewan sewed sewer sexed sexes sexts shack shade shads shady shaft shags shahs shake shako shaky shale shall shalt shame shams shank shape shard share shark sharp shave shawl shawm shays sheaf shear sheds sheen sheep sheer sheet shelf shell shend shewn shews shied shier shies shift shill shims shine shins shiny ships shire shirk shirr shirt shits shiva shivs shoal shoat shock shoes shone shook shool shoos shoot shops shore short shote shots shout shove shown shows showy shred shrew shrub shrug shuck shuns shunt shush shuts shyer sicko sicks sided sides siege sieve sifts sighs sight signs sikas silds silks silky sills silly silos silts silty simar simba since sines sinew singe sings sinks sinus sired siren sires sises sissy sitar sited sites situs sixes sixth sixty sizar sized sizer sizes skald skate skean skeet skegs skein skeps skews skids skied skier skies skiff skill skimp skims skink skins skint skips skirl skirr skirt skite skits skive skoal skosh skulk skull skunk slabs slack slags slain slake slams slang slant slaps slash slate slats slaty slave slays sleds sleek sleep sleet slept slews slice slick slide slier slime slims slimy sling slink slips slits slobs sloes slogs sloop slope slops slosh sloth slots slows slubs slued slues sluff slugs slump slums slung slunk slurp slurs slush sluts slype smack small smalt smarm smart smash smear smell smelt smews smile smirk smite smith smock smogs smoke smoko smoky smolt smote smurf smuts snack snags snail snake snaky snaps snare snarf snark snarl snath sneak sneck sneer snick snide sniff snipe snips snits snobs snogs snood snook snoop snoot snore snort snots snout snows snowy snubs snuff snugs soaks soaps soapy soars soave sober socks sodas sofar sofas softa softy soggy soils solan solar soled soles solid solon solos solus solve somas sonar sonde sones songs sonic sonly sonny sooth sooty sopor soppy sorbs sorer sores sorgo sorry sorta sorts sorus sough souks souls sound soups soupy sours souse south sowed sower space spade spake spall spams spang spank spans spare spark spars spate spats spays speak spear speck specs speed spell spend spent speos spews spica spice spics spicy spied spiel spier spies spiff spike spiky spile spill spine spins spiny spire spiry spite spits spitz spivs splat splay split spoil spoke spoof spook spool spoon spoor spore sport spots spout sprag sprat spray spree sprig sprit sprog sprue spuds spued spues spunk spurn spurs spurt sputa stabs stacc stack staff stage stags stagy staid stain stair stake stale stalk stall stamp stand stane stang stank staph stare stark stars start stash state stats stave stays stead steak steal steam steed steel steep steer stein stela stele stems steno stent steps stere stern stets stews stich stick sties stiff stile still stilt sting stink stint stipe stirk stirs stoat stock stoke stole stoma stomp stone stony stood stook stool stoop stope stops store stork storm story stoss stoup stout stove stows strap straw stray strep strew stria strip strop strow stroy strum strut stubs stuck studs study stuff stull stump stung stunk stuns stunt stupa stupe style styli suave sucks suing suint suite suits sulks sulky sully summa sumps sunny super surah sural suras surds surer surfs surge surgy surly swabs swage swags swain swale swami swamp swank swans swaps sward swarm swart swash swath swats sways swear sweat sweep sweet swell swept swift swigs swill swims swine swing swink swipe swirl swish swoon swoop sword swore sworn swots swung tabby tabes tabla table tacet tacit tacks tacky tacos tafia tails taint takas taken taker takes takin talas taler tales talks talky tally talon taluk talus tamed tamer tames tamis tammy tamps tango tangs tangy tanka tanks tansy tanto tapas taped taper tapes tapir tapis tardy tared tares targe tarns taros tarot tarps tarry tarts tarty taser tasks tasse taste tasty tater tatty taunt taxed taxer taxes taxis taxon teach teaks teals teams tears teary tease teats techs techy teddy teems teens teeny telic tells telly tempo temps tempt tench tends tenet tenge tenne tenno tense tenth tents tepee terce terms terns terra terry terse tesla testa tests testy teths tetra texts thane thank thaws thebe thees theme theol there therm these thews thewy thick thill thine thing think thins thiol thole thong those three threw throb throe throw thuds thugs thumb thump thunk thyme ticks tided tides tiers tiffs tiger tight tiled tiler tiles tills tilts timed timer times timid tinea tined tines tinge tinny tints tired tires titch titer tithe titis title titty tizzy toads toady toast today toddy toeas toffs togas toile toils tokay toked token tokes tolan tolar tolls tolly tolus tombs tomes toned toner tones tonga tongs tonic tonne tonus tools tooth toots toped topee toper topes topic toque torch torrs torse torsk torso torte torts torus toted totem toter totes touch tough tours touts towed towel tower towns toxic toxin toyed trace track tract trade trail train trait tramp trams trans traps trash trass trave trawl trays tread treas treat treed treen trees treks trend tress trews treys triad trial tribe trice trick tried trier tries trike trill trims trine trios tripe trips trite troat troll tromp trona trons troop trope troth trots trout trove trows troys truce truck trued truer trues trugs trull truly trump trunk truss trust truth tryst tubal tubas tubby tubed tuber tubes tucks tufts tufty tumid tummy tunas tuned tuner tunes tunic tunny tuque turds turfs turfy turns turps tushy tusks tutti tutty tuxes twain twats tweed tween tweet twice twigs twill twine twink twins twirl twits tying tykes typed types typos tyros udder upend urial urine utile utter vague vagus vales valet valid valor valse value valve vamps vampy vanda vanes vaped vapes vapid vapor varas varia varix varus varve vases vasts vasty vault vaunt vedic veeps veers veery vegan veges veils veins veiny velar velds venae venal vends venge vents venue verbs verge versa verse verso verst verve vesta vests vetch veter vexed vexes vials vibes viced vices viler villa villi vines viola viols viper virus visas vised vises vista vitta vivas vivid vocab vocal vogue voice voila voile volar voles volts vomer voted voter votes vouch vouge vowed vowel vower vying wacke wacko wacks wacky waded wader wades wadge wadis wafer wafts waged wager wages waifs wails wains waist waits waked waken wakes waled wales walks walls wally wands waned wanes wanks wanly wanna wants wards wares warez warms warns warps warts warty wasps waste watch water watts waved waver waves waxed waxes weald weals weans wears weary weave wedge weeds weedy weeks weens weeny weeps weepy weest wefts weird weirs welds wells welly welts wench wends wetly whack whale whams whaps whats wheal wheat wheel wheen whens where whets which while whims whine whins whiny whips whipt whirl whirs whish whisk whist white whits whity whole whomp whoop whops whorl whose whoso whsle whups wicks widen wider wides wight wilds wiled wiles wills willy wilts wimps wimpy wince winch winds windy wined wines winks winos winze wiped wiper wipes wired wirer wires wised wiser wises wisps wispy witch withe withy witty wived wives wizen woald wodge wolds wolfs woman wombs women wonks wonky woods woody wooed wooer woofs wools woops woozy words wordy works world worms wormy worry worse worst would wound woven wowed wrack wraps wrath wreak wreck wrens wrest wring wrist write writs wrong wrote wroth wrung wryer wurst wussy xebec xeric yanks yapok yapon yappy yards yarns yawed yawls yawns yawps yeahs yeans yearn years yeast yells yelps yetis yikes yodel yogic yogis yoked yokel yokes yolks yonks yours youth yowls yucky yukky yummy yurts zappy zarfs zebec zebus zeros zests zesty zetas zilch zincs zines zingy zippy zitis zoned zones zooms zorch",
+            6: "abeles abider abides abodes acorns acuter acutes adders adding adobes adored adorer adores adorns aeries aether afters aiders aiding aiglet aigret ailing aiming airbed airier airing airted alders altars alters amides amines aneled aneles angled angler angles aniler ankles anklet anodes anoles anthem anther antler aortal aortas arcing arisen arises arming arsine arsing asides askers aspers astern asters atoned atoner atones auklet awards awning azides baaing babble babied babier babies bached baches backed backer badder badged badger badges badman badmen bagged bagger bagman bagmen bailed bailee bailer bailey bailie bailor baited baiter bakers bakery baking balded balder balers baling balked balker ballad balled ballet ballon ballot banded bander banged banger bangle banked banker banket banned banner banter barbed barbel barber barbet barfed barged barges baring barked barker barley barman barney barong barons barony barred barrel barren barres barret barrow barter barton baryes baryon bashed basher bashes basics basing basins basion basked basket basses basset bassos basted baster bastes bathed bather bathes bathos bating batman batmen batons batted batten batter battle battue bauble bawled bawler baying beaded beaked beaker beamed beaned bearer beasts beaten beater beauts beauty beaver becket bedded bedder beefed beeped beeper beeves beezer begged belied belief belies belled belles bellow belted bended bender berley bested better bettor bevels bevies bezels bibber bicker bidden bidder biding biffed bigger bikers biking bikini bilges bilked bilker billed billet billon billow binder bindle binged binger binges bingle binned birded birder birled birred bister biters biting bitted bitter blacks bladed blades blains blamed blamer blames blanks blared blares blasts blazed blazer blazes bleats bleeds bleeps blende blends blinds blinis blinks bloats blocks blocky blonde blonds bloods bloody blooms bloomy bloops blower bluing blurry boasts boated boatel boater bobbed bobble bodged bodges bodied bodies boding bogeys bogged boggle bogies boiled boiler boinks bolder bolted bolter bombed bomber bonces bonded boners bonged bonier boning bonked bonzer boobed boodle booger booing booked boomed boomer boosts booted bootee boozed boozer boozes bopped bopper border borers boring borrow bosket bossed bosses bother bottle boughs bought boules boused bouses bowels bowers bowery bowing bowled bowleg bowler bowsed bowses bowyer boxers boxier boxing braced bracer braces bracts braids brails brains brainy braked brakes brands brandy branks branny brants braved braver braves bravos brawer brawls brawny brayed brayer brazed brazen brazer brazes breads breaks breams breeds breeks brents breves brevet brewed brewer bribed briber bribes bricks bricky brides brills brings brinks brisks broads broils broods broody brooks brooms browns bruins bruits brumby bubble bubbly bucked bucker bucket buckle budded budder buddle budged budges budget buffed buffer buffet bugged bugled bugler bugles bulged bulges bulked bulled bullet bumble bummed bummer bumped bumper bundle bunged bungee bungle bunked bunker bunted bunter burble burgee burger burgle buried burier buries burins burkas burkes burled burley burned burner burnet burped burred burros burrow bursts burton bushed bushel bushes busied busier busies busing busked busker bussed busses busted bustee buster bustle butler butted butter buttes button buying cabbed cabers cabins cabled cables cablet cabman cabmen cached caches cachet cackle cactus cadets cadged cadger cadges cadres cagers caging caiman caking calces calked called caller callow calmed calmer calved calves calxes camber camlet camped camper cancel cancer candle candor caners canine caning canker canned canner cannon cannot canoed canoes canons canted canter cantle canton cantor cantos cantus canyon capers caplet capons capped capper captor carats carbon carboy carded carder careen career carers caress carets caries carina caring carked carman carnal carnet carpal carped carpel carper carpet carrel carted cartel carter cartes carton carved carvel carven carver carves casein casern cashed cashes cashew casing casino casket caster castes castle castor caters cation catted cattle caudle caused causer causes causey cavern cavers cavies cavils caving cawing ceased ceases cedars ceders ceding cellar celled censed censer censes censor census center cering certes chafed chafer chafes chaffs chaffy champs chants chappy charms charts chased chaser chases chasms chawed cheats checks checky cheder cheeks cheeky cheeps cheers cheery cheese cheesy chemmy cherry cherty chests chesty chewed chewer chicer chicks chicle chicly chided chider chides chills chilly chimed chimer chimes chimps chines chinks chinos chippy chirks chirps chirpy chirrs chives chocks choked choker chokes choler chomps choppy chords chorea chores chorus chowed chucks chufas chuffs chuffy chummy chumps chunks chunky churls churns churrs ciders cinder cipher cither cities citing civets clacks clamps clangs clanks clares claret claros clasps claver clawed cleans clears cleats clefts clever clewed clicks climbs climes clings clingy clinks cloaks clocks cloddy clomps cloned clones clonks clonus closed closer closes closet clouds cloudy clouts cloven clover cloves clowns cloyed clucks cluing clumps clumpy clumsy clunks clunky coacts coaled coaler coasts coated coatee coaxed coaxer coaxes cobber cobble cocked cocker cockle codded coddle coders codger coding codons coffee coffer coffle coiled coined coiner coital coking colder coleus coleys collar collat collet colone colons colony colors colter combed comber comedo comedy comely comers comets coming comped compel comply condom condor condos coneys confer conger coning conker conned consed conses contos cooing cooked cooker cooled cooler cooped cooper copalm copals copied copier copies coping copped copper copses copter corals corbel corded corder corers coring corked corker cornea corned cornel corner cornet corral correl corset corvee corves coshed cosher coshes cosses cosset costal costar costed cottar cotter coughs coupes covens covers covert covets coveys cowers cowing cowled coxing cozens cozier cozies cracks crafts crafty crakes cramps craned cranes cranks cranky cranny crapes crappy crasis crated crater crates craved craven craves crawls crawly crazed crazes creaks creaky creams creamy crease create creeds creeks creels creeps creepy creese cremes crenel crepes crepey crests crewed crewel cricks crimes crimps crimpy cripes crises crisis crisps crispy croaks croaky crocks crocus crofts crones crooks croons crores crowds crowed crowns cruces cruets crufts crufty crumbs crumby crummy crumps cruses crusts crusty cruxes crying cubebs cubers cubing cuddle cuddly cuffed culled culler cullet culver cumber cupped cupule curbed curdle curers curets curfew curies curing curios curled curler curlew cursed curses curter curule curved curves curvet cusped cuspid cussed cusses cuties cutler cutlet cutter cuttle cystic dabbed dabber dabble dachas dafter dagger dainty daises dammed damned damped dampen damper damply danced dancer dances dander dandle danged danger dangle danker dapper darers daring darken darker darned darnel darner darted darter dashed dasher dashes daters dating daubed dauber daunts dawdle dawned daybed dazing deaden deader deafen deafer dealer dearer deaves decade decane decani decare deceit decent decide decile decked deckle deeded deemed deepen deeper defeat defect defers deffer defied defier defies define defter deists deject delict delint delved delver delves denied denier denies denims denser dented depict deride desist detect detent deters detest devest dewier dexter dholes dialed dialer diaper dibble dicier dicing dicker dickey diddle diddly diffed differ digest digged digger diking dimers dimmed dimmer dimple dimply dinars diners dinged dinges dingle dingus dining dinker dinned dinner dipped dipper direct direst dirges dished dishes dissed disses dither divers divert divest divide divine diving dixies dobbed docent docile docked docker docket dodder doddle dodged dodgem dodger dodges doffed dogged dogger dogies doited doling dollar dolled dolors doming domino donged dongle donned donnee donors doodle doomed dopers dopier doping dories dormer dorser dosing dossed dosser dosses doters doting dotted dotter dottle doughs doughy dourer doused douser douses dowels dowers dowery downed downer dowsed dowser dowses doxies dozers dozier dozing drafts drafty drains drakes draped draper drapes drawee drawer drawls dreads dreams dreamy dreary dredge drifts drifty drills drinks drivel driven driver drives droned drones drools droops droopy drover droves drowns drudge drunks drupes dryads drying dubbed dubber ducked ducted duding dueled dueler duffed duffel duffer dulled duller dulses dumber dumbly dumped dumper dunces dunged dunked dunned dunner dupers dupery duping during dusted duster duties dwells earing earned earner easing eaters eatery eating eceses ecesis eerier eiders either elands elated elater elates elders elided elides elites eloped eloper elopes eluded eluder eludes eluted elutes elvers emesis enates enosis enters eosins erring esters etudes exuded exudes fabled fables facers facets facing facula fading faffed fagged failed fainer faints fairer fakers fakery faking fakirs faller fallow falser falter famine fanged fanned faqirs farces farina faring farmed farmer farrow farted fasces fasted fasten faster father fating fatted fatten fatter fauces faucet faults faulty favors fawned fawner faxing fazing feared fearer feasts fecula feeder feeler feints feline felled feller felloe fellow felted fenced fencer fences fended fender fennec fennel ferine ferula ferule fessed fesses fester feting fetter fettle feuded fevers fibbed fibber fibers fiches fichus fickle fickly fiddle fiddly fidget fifers filers filing filled filler fillet filmed filter fimble finder finger fining finked finned fipple firers firing firmed firmer fished fisher fishes fitted fitter fivers fixers fixing flacks flaked flaker flakes flakey flamed flamer flames flanks flared flares flasks flawed flayed flayer flecks fleets flexed flexes flicks flings flints flinty flirts flirty floats floaty flocks flocky floods floors flours floury flouts flowed flower flukes flumes flumps flunks flunky fluors flurry fluted fluter flutes fluxed fluxes flying foaled foamed fobbed fodder fogged fogies foiled foists folded folder follow fonder fooled footed footer forays forced forcer forces forded forgat forged forger forges forget forgot forked formal format formed former formyl fortes fortis fossas fosses foster fought fouled fouler fowled foxier foxing fracas fracks framed framer frames francs franks frater frayed freaks freaky frills frilly frisks frisky frocks frowns fruits fruity frumps frumpy frying fucked fucker fuddle fudged fudges fueled fueler fulled fuller fumble fuming funded funked funnel funner furies furled furred furrow fusees fusing fussed fusser fusses gabbed gabber gabble gabled gables gablet gadded gadder gadget gaffed gaffer gaffes gagged gagger gaggle gagman gagmen gained gainer gaited gaiter galled galley gallon gallop gamble gamers gamier gamine gaming gamins gammer gamone gander ganged ganger gannet gaping garbed garble garden garget gargle garner garnet garret garter gashed gashes gasket gasman gasmen gasped gasper gassed gasser gasses gather gating gauged gauger gauges gavels gawked gawker gawped gazers gazing geared geeing geezer gelded gelled gender genies genips genius genned genres gentes getter giants gibber gibbet gibing giblet gifted gigged giggle giggly gilded gilder gilled gimble gimlet gimped ginger ginned girded girder girted givens givers giving glaces glacis glades glands glared glares glazed glazer glazes gleams gleamy gleans glebes gleets glided glider glides glints gloats globed globes gloomy gloved glover gloves glowed glower gluing glumes gnarls gnarly gnomes gnoses gnosis goaded goatee gobbed gobbet gobble goblet gofers goffer goggle goggly goglet goiter golfed golfer goners gonged goodly goofed google googly goosed gooses gorals gorged gorges gorget goring gotten gouged gouger gouges gowned graced graces graded grader grades gradin gradus grafts grails grains grainy gramps grands grange granny grants grapes graphs grasps grated grater grates gratin gratis graved gravel graven graver graves gravid grayed grayer grazed grazer grazes grease greasy greats greave grebes greedy greens greeny greets grille grills grilse grimed grimes grinds griped griper gripes gritty groans groats grocer groins grooms groped groper gropes grotto grotty groups grouts grouty grovel groves grower grudge grumps grumpy grunge grungy grunts guddle guggle guided guider guides guises gulled gullet gulped gulper gummed gunned gunnel gunner gunsel gunter gurged gurges gurgle gushed gusher gushes gusted gutted gutter guttle guying gyving hacked hacker hackie hackle haggle hailed hailer haired halers haling halloo hallow haloed haloid halons halted halter halved halves hamlet hammed hammer hamper handed handle hangar hanged hanger hanker hankie happen hapten harden harder haring harked harmed harmer harped harper harrow hashed hashes haslet hasted hasten hastes haters hating hatred hatted hatter hauled hauler haunts havens having hawing hawked hawker hawser hawses haying hazels hazers hazier hazing headed header healed healer heaped hearer heated heater heaved heaven heaver heaves heckle heddle hedged hedger hedges heeded heeled heeler hefted heists heller helmet helped helper helves hemmed hemmer hepper herded herder hewers hewing hexing hickey hidden hiders hiding hieing higgle higher hikers hiking hinder hinged hinges hinted hinter hipped hipper hippie hirers hiring hissed hisses hither hitter hiving hoaxed hoaxer hoaxes hobble hocked hockey hodden hodman hodmen hoeing hogged hogger hoiden hoists hokier hoking holder holier holily holing holler hollow homely homers homeys homier homily homing hominy honers honeys honing honked honker honors hooded hoofed hoofer hooked hooker hooped hooper hooted hooter hoover hooves hoping hopped hopper hopple horded hordes horned hornet horsed horses horsey horsts hosier hosing hosted hostel hotbed hotels hotkey hotted hotter housed housel houses hovels hovers howled howler howlet hoyden huddle huffed hugged hugger hulled huller humble humbly hummed hummer humped hunger hunker hunted hunter hurdle hurled hurler hurley hurter hurtle hushed hushes husked husker hustle hyping ibises imides incept incest infect infers infest ingest inject inkles insert intend intens intent interj intern inters invent invert invest irides irises ironed ironer jabbed jabber jacked jacket jading jagged jailed jailer jammed jammer jangle jangly japery japing jarred jasper jaunts jaunty jawing jeered jeerer jelled jerked jested jester jetted jibbed jibber jibing jigged jigger jiggle jiggly jilted jingle jingly jinked jinxed jinxes jitter jiving jobbed jobber jockey jogged jogger joggle joined joiner joints joists jokers jokier joking jolted jolter joshed josher joshes josses jostle jotted jotter joules jousts joying judder judged judges jugged juggle jumble jumped jumper jungle jungly junked junker junket juries juster justle justly jutted kaiser karate karats kashas kasher keeled keened keener keeper kelter kenned kennel kerned kernel kettle kibble kicked kicker kidded kidder killed killer kilned kilted kilter kinder kindle kindly kingly kinked kipped kipper kirtle kissed kisser kisses kiting kitted kitten kittle knacks knocks knotty knouts kosher krafts kraits krauts kroner kronor kronur laager labret laches lacier lacing lacked lacker lackey ladder ladies lading ladino ladled ladler ladles lagers lagged lagger lambed lamers lamina laming lammed lanced lancer lances lancet landed lander lanker lanner lapped lappet lapsed lapser lapses lapsus larded larder lardon larger larges largos larine larked larker lasers lashed lasher lashes lasing lasses lassos lasted lateen lathed lather lathes lathis latino latkes latten latter lattes lauded lauder laughs lavers laving layers laying lazied lazier lazies lazing leaded leaden leader leafed leaked leaker leaned leaner leaped leaper leased leaser leases leaved leaven leaver leaves leched lecher leches ledger ledges leered lefter legged legion lender lenses lepers lesion lessee lessen lesser lesses lesson lessor letter levees levels levers levied levier levies lewder lexers libber licked licker lidded lieges lifers lifted lifter ligers likely likens likest liking likker lilted limber limens limeys limier liming limned limner limped limper limpet limpid limply linens liners linger lining linked linker linted lintel linter lipped lisped lisper listed listee listel listen lister liters lither litter little lively livens livers livery livest living loaded loader loafed loafer loaned loaner loaves lobbed lobber locked locker locket lodged lodger lodges lofted logged logger logier loiter lolled loller lonely loners longed longer looked looker loomed looped looper loosed loosen looser looses looted looter loping lopped lopper lorded lories losers losing losses lotion louder loughs loupes loured loused louses louvar louver lovely lovers loveys loving lowers lowery lowing lubber lubing lucked luffed lugged lugger luging lulled lumbar lumber lumens lumina lumped lumper lunged lunger lunges lungis luring lurked lurker lusher lushes lusted luster luting macing mackle macron macros macula macule madden madder madman madmen mafias magics maidan maiden maiger mailed mailer maimed maimer majors makers making mallee mallei mallet mallow malted mameys manged manger mangle maniac manias manics manioc manned manner manors manses mantas mantel mantes mantic mantis mantle mapped mapper marble marbly marcel marges marina marine marked marker market maroon marred marron marrow marvel masers mashed masher mashes masked masker massed masses masted master mastic maters mateys matier mating matins matron matted matter mattes mauger mauled mauler mavens maxing mayors mazers mazier meager meaner medals meddle meeker melded mellow melted melter mended mender menses mercer merged merger merges merles meshed meshes messed messes mestee metals meters metier meting mettle mewing mickey micron micros midden middle midges midget midgut miffed miking milder mildew milers milked milker milled miller millet milted milter mimers miming minced mincer minces minded minder miners mingle mining minors minted minter minxes mirier miring misers misery misled missed misses missus misted mister miters mither mitten mixers mixing moaned moaner moated mobbed mobile mocked mocker modals modded models modems module moduli modulo moiled moiler molded molder molted molter moneys monger monies montes months mooing mooned moored mooted mopeds mopers mopier moping mopped mopper moppet morale morals morass morays morels morrow mortal mortar moseys moshed moshes mosses motels motets mother motile motion motive mottle moused mouser mouses mouths mouthy movers movies moving mowers mowing mucked mucker muddle muffed mugged mugger muggle mulled muller mullet mulley mumble mumbly mummer munged murals murine mushed musher mushes musing mussed mussel musses mustee muster muting mutiny mutter mutton mystic nabbed nacred naffer nagged nagger nailed nailer naiver naming napery napped napper narrow nasion nation natron natter navels navies neared nearer neaten neater necked needed nerved nerves nesses nested nestle nether netted netter nettle neuter nibble niches nicked nickel nicker nickle nigger niggle nigher nimble nimbly nipped nipper nipple nixing nobble nobler nobles nocked nodded noddle nodule noised noises noodle nooses normal normed noshed nosher noshes nosier nosily nosing noting notion nouses novels nubble nubbly nubile nudged nudges nuking numbed number numbly numina nursed nurser nurses nutlet nutted nutter nybble oaring odored oglers ogling oilers oilier oiling oinked oohing oozier oozing opened opener opined opines opting orange orangs orangy orated orates ounces ousted ouster outing outlet outset owning oyster pacers pachas pacier pacing packed packer packet padded paddle padres pagers paging pained paints painty paired paling palled pallet pallia pallid palmar palmed palmer palter pamper pander panics panned panted pantie pantos panzer papers papery parang parcel pardon parers parget paries paring parked parlay parley parred parsec parsed parser parses parson partan parted parton pashas passed passel passer passes passus pastas pasted pastel pastes pastie pastil pastis pastor pathol pathos patios patrol patron patted patten patter pauper paused pauses paving pawing pawned payees payers paying peaces peaked pealed pecked pecker pedalo pedals peddle peeing peeked peeled peeler peeped peeper peered peeved peeves pegged pellet pelmet pelted pended penned pepped pepper perked permed perron person perter pester pestle petals peters petrel petrog petrol petted petter pewter phages phased phases phasic phasis phatic phobia phobic phonic photic physic physio picked picker picket pickle piddle piddly pieing pigged piglet pikers piking piling pilled pillow pimped pimple pimply pincer pinged pinier pining pinked pinker pinkos pinned pintos pipers piping pipped pissed pisser pisses pistes pistil pistol piston pithos pitied pities pitted pixies placed placer places placet placid plages plaids plains plaint plaits planar planed planer planes planet planks plants plated platen plater plates platys played player pleads pleats plebes plonks plover plowed plower plucks plucky plumbs plumed plumes plumps plunks pluses plying pocked pocket podded pogeys pogges pogies points pointy poised poises pokers pokeys pokier poking polder polers poling polled pollen poller ponced ponces ponder ponged pongee pongid ponied ponies pontes poodle poohed pooing pooled pooped popery popped popper poppet popple poring porker portal ported porter posers posher posies posing posits posses posset possie postal posted poster postie pother potion potted potter pottle poured pouted pouter powder powers prangs pranks prated prater prates praxes praxis prayed prayer preens premed preyed priced prices pricey pricks prided prides primed primer primes primps primus prinks prints prized prizes probed probes proleg proles prongs propel proper proser proved proven prover proves prudes pruned pruner prunes prying pucker puddle puffed puffer puking puling pulled puller pullet pulley pulped pulsed pulses pumped pumper punier punker punned punner punnet punted punter pupped puppet pureed purees purged purger purges purine purled purred purree pursed purser purses pushed pusher pushes pusses putted puttee putter pwning pyxies quaver quiver rabble rabies racers racier racing racked racket raddle radios radium radius rafted rafter ragged raging raglan ragman raided raider railed railer rained raised raiser raises raking ramble rammed rammer ramped ranees ranged ranger ranges ranked ranker ranket ranted ranter rapers rapier rapine raping rapped rappee rappel rappen rapper raptly raptor raring rasher rashes rasped rasper raster ratels raters rather rating ration ratios ratoon ratted ratter rattle rattly ravels ravens ravers ravine raving razing reader realer reamed reamer reaped reaper reared reaved reaver reaves recent recept redden redder reefed reefer reeked reeker reeled reeler refers reffed refine refire region reined reject relent relics relict relied relief relies reline relink relish relist reluct render rented renter repeal repeat repels repent repine resect resend resent resiny resist rested rester retted reveal revels reverb revere revers revert revest revved rhinos rhombs rhumbs ribbed ribber ricers richer riches ricing ricked rickey ridden riddle riders ridged ridges riding rifely riffed rifled rifler rifles rifted rigged rigger riling rilled rillet rimier riming rimmed rimple ringed ringer rinsed rinser rinses rioted rioter ripely ripped ripper ripple ripply risers rising risked rivers rivets riving roamed roamer roared roarer roasts robbed robber robing robins robles rochet rocked rocker rocket rogers roiled rolled roller romped romper rondos roofed roofer rooked roomed roomer roosts rooted rooter ropers ropier roping rosier rosily rosins rosiny roster rotted rotten rotter rouged rouges roughs roused rouser rouses rousts routed router routes rovers roving rowels rowers rowing rubbed rubber rubble rubbly rubier rubies rubles ruched rucked rudder ruddle ruffed rugged rugger ruined ruling rumble rumbly rumina rummer rumple rumply rundle runnel runner rushed rusher rushes rusted rustle rutted sabers sabins sables sachem sachet sacked sacker sacred sadden sadder saddle sagged sailed sailer sailor saints salina saline saliva sallet sallow salols salons salted salter salved salver salves salvos sample sanded sander sapped sapper sarges sarong sashes sassed sasses satang sateen sating satins satiny sauced saucer sauces sauger sautes savers saving savors savory savoys sawing saying scalar scalds scaled scaler scales scalps scampi scamps scants scanty scapes scared scares scarfs scarps scatty scends scenes scents scolds scones scoops scoots scoped scopes scored scorer scores scorns scoter scours scouts scrags scrams scrape scraps screed screen screes screws screwy scrimp scrims scrips script scrogs scrubs scrump scrums sculls scurfy scurry scurvy scutes seabed sealed sealer seamed seared seated sebums sedges sedums seeded seeder seeing seeker seeled seemed seeped seined seiner seines seized seizer seizes seller selves sender senhor senior sensed senses sensor sepses sepsis serape seraph serena serene series serifs serine serins serums served server serves servos settee setter settle sevens severe severs sewers sewing sexing shacks shaded shades shafts shaken shaker shakes shakos shamed shames shamus shandy shanks shanny shanty shaped shaper shapes shards shared sharer shares sharks sharps shaved shaven shaver shaves shears sheeny sheers sheets shells shelly shelty sherry shewed shifts shifty shills shindy shined shiner shines shinny shires shirks shirrs shirts shirty shitty shiver shoals shoats shocks shooed shoots shored shores shorts shorty shouts shoved shovel shover shoves showed shower shrank shreds shrewd shrews shriek shrike shrimp shrine shrink shrive shrubs shrugs shrunk shucks shunts shying sicced sicked sicken sicker sickie sickle sickly siding sieges sieved sieves sifted sifter sighed sigher signed signer signet signor silted silver simile simmer simper simple simply singed singer singes single singly sinker sinned sinner sinter sipped sipper sippet siring sister siting sitter sizing skated skater skates skerry skewed skewer skiing skills skinks skinny skirls skirts skived skiver skives skoals skulks skulls skunks skying slacks slaked slakes slants slated slater slates slaved slaver slaves slavey slayed slayer sleeks sleeps sleepy sleets sleety slewed sliced slicer slices slicks slider slides slimes slings slinks slinky sliver sloops sloped slopes sloven slowed slower sluing slumps slurps slurry smacks smalls smarms smarmy smarts smarty smears smeary smells smelly smelts smiled smiler smiles smiley smirks smirky smiter smites smiths smithy smocks smoked smoker smokes smokey snacks snails snaked snakes snared snares snarfs snarks snarky snarls snarly sneaks sneaky sneers snicks snider snidey sniped sniper snipes snoods snooks snoops snoopy snoots snooty snored snorer snores snorts snotty snouts snowed soaked soaker soaped soared sobbed sobers socked socket sodded sodden soever soften softer soiled solano solans solder soling soloed solons solved solver solves somber sooner sopped sorbed sorbet sorrel sorrow sorted sorter sotted soughs sought souled souped soured sourer soused souses souter sowers sowing spaced spacer spaces spacey spaded spader spades spangs spanks spared sparer spares sparid sparks sparky sparry spates spayed speaks spears specks speeds speedy spells spends spewed spewer spiced spicer spices spider spiels spiked spikes spiles spills spinal spinel spines spinet spiral spirea spires spital spited spites splats splays splice spline splint splits spoils spoken spokes spoofs spooks spooky spools spoons spoony spoors spored spores sports sporty spotty spouts sprags sprang sprats sprays spread spreed sprees sprigs spring sprint sprite sprits spritz sprogs sprues sprung spuing spunks spunky spurns spurry spurts spying stacks staged stages staked stakes staled staler stales stalks stalky stalls stamps stapes stared starer stares starry starts stases stasis stated stater states stator statue status staved staves stayed stayer steads steady steaks steals steams steamy steeds steels steely steeps steers stelas steles stenos stents stewed sticks sticky stiles stills stilly stilts stingo stings stingy stinko stinks stinky stints stipel stipes stirks stirps stithy stiver stoats stocks stocky stoked stoker stokes stolen stoles stolon stomas stomps stoned stoner stones stools stoops stored stores storks storms stormy stoups stouts stover stoves stowed strafe strake straps straws strays stress strewn strews striae stride strife strike string stripe strips stripy strive strobe strode stroke strong strops strove struma strums strung struts stumps stumpy stunts styled styles stylet stylus suaver subbed sucked sucker suckle sudden suffer suited suites sulked summed summer sunbed sunder sundew sunned superb superl supers supped supper surfed surfer surged surges sussed susses sutler suttee swaged swages swamis swamps swampy swanks swanky swards swarms swayed swears sweats sweaty sweeny sweeps sweets swells swifts swills swines swinge swings swiped swipes swirls swirly swoons swoops swords tabbed tablas tabled tables tablet tabret taches tacked tacker tacket tackle tagged tagger tailed tailor taints taipan takers taking takins talked talker taller tallow talons tamers taming tamped tamper tampon tangle tanked tanker tanned tanner tapers taping tapirs tapped tapper tappet target taring tarpan tarpon tarred tartan tartar tarted tarter tasers tasked tassel tasses tasset tasted taster tastes taters tatted tatter tattie tattle taunts tauten tauter tavern taxers taxing taxons teamed teared tearer teased teasel teaser teases tedder teeing teemed teeter telfer teller temped tempeh temper tended tender tenner tensed tenser tenses tensor tented tenter tepees termed terser teslas testas tested testee tester testes testis tether tetter texted thaler thanes thanks thawed thebes themed themes theses thesis thills thingy thinks thinly thirty tholes tholos thrave thrice thrive thumbs thumps thunks ticked ticker ticket tickle tickly tiddly tidied tidier tidies tidily tiding tiffed tigers tilers tiling tilled tiller tilted tilter timber timers timing tinder tinged tinges tingle tingly tinier tinker tinkle tinkly tinned tinner tinted tinter tipped tipper tippet tippex tipple tiring titers titfer tithed tither tithes titled titles titter tittle tmeses tmesis toasts toasty toddle todies toeing toffee togaed togged toggle toiled toiler toilet toking tolled tombed toners tonged tonier toning tooled tooted tooter topees topers toping topped topper topple tortes toshes tossed tosser tosses tother toting totted totter toughs toured tourer touted touter towels towers towery towing toying traced tracer traces tracks tracts traded trader trades trails trains traits tramps trapes travel traves trawls treads treats treaty trends trendy triads trials tribes tricks tricky trikes trills trimer trines triter troats trolls trompe tromps troops tropes troupe trouts trover troves trowed trowel truces trucks trudge truing trumps trunks trusts trusty trying trysts tubers tubing tucked tucker tucket tufted tufter tugged tumble tuners tuning tunnel turfed turned turner turtle tushes tusked tusker tutted tweeds tweedy tweeny tweets twined twiner twines twinge twinks twirls twirly typing udders unease uneasy upends urease urials ursine uruses vaguer vainer valine valise valley valses valued valuer values valved valves vamped vamper vanned vaping varied varies vaster vatted vaults vaulty vaunts veered vegged vegges veiled veined vended vendee vendue veneer vented venter verged verger verges verier versed verses versos versts versus vertus vested vetoed vetoes vetted vexing vicing viking vipers virtue virtus vising vittle volley voters voting vouges vowels vowing wacker wadded waddle waders wadges wading wafers wafted wagers wagged waggle waggly waging wailed wailer waists waited waiter waived waiver waives waking waling walked walker walled wallet wallop wallow wamble wander wangle waning wanked wanker wanner wantad wanted wanton warble warded warden warder warier waring warmed warmer warned warped warper warred warren warsle washed washer washes wasted waster wastes waters watery wattle wavers wavier waving waxier waxing weaken weaker weaned weaner wearer weasel weaved weaver weaves wedded wedder wedged wedges weeded weeder weeing weened weeper weever welded welder welled welted welter wended wester wether wetter whacks whaled whaler whales wheres wherry whiled whiles whined whiner whines whinge whingy whinny whirls whirly whited whiten whiter whites whitey wholes whomps whoops whores whorls wicked wicker wicket widely widget wiener wifely wigged wiggle wiggly wiglet wilder wilier wiling willed willet willow wilted wimble wimped wimple winced winces winded winder winged winger winier wining winked winker winkle winner winter wipers wiping wirier wiring wisely wished wisher wishes wising withed wither withes witted witter wiving woaded wobble wobbly wodges wolfed wolver wolves womble wonder wonted wooded wooden woofed woofer wooing wooled woolen worded worked worker wormed worsen worser worsts wowing wowser wracks wreaks wrecks wrests wrings wrists writer writes wrongs wursts wusses xyster yabber yakked yammer yanked yapped yapper yarrow yawing yawned yawner yawped yawper yeaned yeasts yeasty yelled yellow yelped yessed yester yipped yippee yippie yodels yokels yoking yonder yorker youths yowled yukked yuppie zaffer zapped zapper zenned zinged zinger zipped zipper zither zoning zonked zoomed zoster"
+        };
+        const COMMON_DATA = {
+            4: "able acid aged also area army away baby back ball band bank base bath bear beat been bell belt best bill bird blow blue boat body bomb bond bone book boom born boss both bowl bulk burn bush busy cake call calm came camp card care case cash cast cell chat chip city club coal coat code cold come cook cool cope copy core cost crew crop dark data date dawn dead deal dear debt deep deny desk dial diet dirt dish disk does done door dose down draw drew drop drug dual duke dust duty each earn ease east easy else even ever exit face fact fail fair fall farm fast fate fear feed feel feet fell felt file fill film find fine fire firm fish five flag flat flow food foot ford form fort four free from fuel full fund gain game gate gave gear gene gift girl give glad goal goes gold golf gone good gray grew grow gulf hair half hall hand hang hard harm hate have head hear heat held hell help here hero high hill hire hold hole holy home hope horn host hour huge hung hunt hurt idea inch iron item jack join joke jump jury just keen keep kept kick kill kind king knee knew know lack lady laid lake lamp land lane last late lead left less life lift like line link list live load loan lock long look lord lose loss lost love luck made mail main make male mall many mark mass mate meal mean meat meet menu mere mile milk mill mind mine miss mode mood moon more most move much must name navy near neck need news next nice nine none nose note only open over pace pack page paid pain pair palm park part pass past path peak pick pink pipe plan play plot plug plus poem poet pole poll pool poor port pose post pull pure push race rail rain rank rare rate real rear rent rest rice rich ride ring rise risk road rock role roll roof room root rope rose rule rush safe said sake sale salt same sand save seat seed seek seem seen self sell send sent ship shop shot show shut sick side sign silk sing sink site size skin slip slow snow soft soil sold sole some song soon sort soul spot star stay stem step stop such suit sure swim tail take tale talk tall tank tape task team tear tell tend term test text than that them then they thin this thus tide till time tiny told toll tone took tool tour town tree trip true tube tune turn twin type used user vary vast very view vote wage wait wake walk wall want ward warm wash wave ways weak wear week well went were west what when whom wide wife wild will wind wine wing wire wise wish with wood word wore work yard year your zero zone",
+            5: "about above abuse after alarm alone along alter among angel anger angle apart arena arise array aside asset award aware badly baker basic basis beach began begin being bench birth black blade blame blank blast blind block blood board boost booth bound brain brand brave bread break brick brief bring broad broke brown brush build bunch burst cabin candy carry catch cause chain chair charm chase cheap check cheek chest child chill choir chose class clean clear clerk click climb clock close cloth cloud coach coast could count court cover crack craft crane crash crazy cream crime cross crowd crown crush curve daily dance death delay depth dirty dozen draft drama drawn dream dress dried drill drink drive drove dying eager early eight elite enter faith false fault fiber fifth fifty fight final flame flash fleet float flood floor focus force forty found frame frank fresh front fruit fully funny giant given glass globe glory grace grade grain grand grant grass grave great green greet grill gross group grown guard guess guest guide happy harsh heart heavy hello hence hobby honey horse hotel house inner joint judge knock known label large laser later laugh layer learn lease least leave legal level light lives local lodge logic loose lover lower loyal lucky lunch magic major maker march match mayor meant media mercy merge metal meter might minor minus mixed model money month moral mount mouse mouth music naked nasty naval nerve never newly night noble noise novel nurse order other outer owner paint panel panic paper party pasta patch pause peace pearl phase phone photo pitch place plain plane plant plate plaza point polar pound power press price pride prime print prior prize prove pulse punch pupil quick quiet quite quote radio range rapid ratio reach react ready realm rebel refer relax rider ridge right risky rival river rocky rough round route royal rural sauce scale scene scope score sense serve seven shade shake shall shame shape share sharp sheep sheet shelf shell shift shine shirt shock shoot shore short shout shown sight silly since sixth skill skirt sleep slice slide small smart smell smile smoke snake solar solid solve sorry sound south space spare speak speed spell spend spice spine split spoke sport spray stack staff stage stair stake stamp stand stare start state steak steam steel steep steer stern stick still stock stone stood store storm story stove strip stuck study stuff style suite sunny super swear sweat sweep sweet swift swing sword table taste teach thank theme there thick thing think those three threw throw thumb tiger tight timer tired title toast today tooth topic touch tough towel tower toxic trace track trade trail train trait trash treat trend trial tribe trick troop truck truly trunk trust truth twice valid value virus vocal voice voter waist waste watch water weary weird whale wheat wheel where which while white whole whose woman world worry worse worst would wound woven wrist write wrong youth",
+            6: "backed barrel basket battle beauty belief better border bottle bought budget butter button cancel candle carbon career carpet castle center cheese closed closer coffee comedy coming copper corner create crisis dancer danger decade decide deeper defeat define dinner direct dollar driven driver during eating either farmer faster father fellow filing finger flower flying follow forget formal format former foster gamble garden gather gender handle happen heaven hidden holder hunger hunter intent invest jacket jungle kernel killer kitten ladder latter leader lesson letter likely linked listen little lively living locker lonely longer lovely lumber makers manner marine market master matter middle miller mobile mother motion motive narrow nation normal notion number orange packet patrol pepper person picked pickle pillow planet player pocket powder prayer proper rather reader recent region relief render repeat resist reveal rocket ruling sailor sample saving screen script senior series server settle severe shower silver simple simply single sister spoken spread spring statue steady stolen stress strike string stripe strong sudden suffer summer tablet taking target thanks thirty ticket timber travel treaty tunnel valley varied virtue walker wallet wander winner winter wonder wooden worker writer yellow"
+        };
+
+        const DIFFICULTY_INFO = {
+            3: { name: 'ROOKIE', desc: '3-letter words. Obscure Scrabble-style words, short ladders.' },
+            4: { name: 'ADEPT',  desc: '4-letter words. Common vocabulary, longer ladders.' },
+            5: { name: 'EXPERT', desc: '5-letter words. Far more paths to explore, far more ways to get lost.' },
+            6: { name: 'MASTER', desc: '6-letter words. Sparse ladders, long solutions. Good luck.' }
+        };
+
+        const graphCache = {};
+
+        function getDictWords(len) {
+            if (len === 3) return COMPREHENSIVE_WORDS;
+            return (DICT_DATA[len] || '').split(' ').filter(Boolean);
+        }
+
+        // Builds (once per word length) the one-letter-difference graph of the dictionary,
+        // its largest connected cluster (so every puzzle is guaranteed solvable) and the pool
+        // of words that the 9-word selection grid draws from.
+        function getGraph(len) {
+            if (graphCache[len]) return graphCache[len];
+            const words = [...new Set(getDictWords(len))];
+            const dict = new Set(words);
+            const buckets = new Map();
+            for (const w of words) {
+                for (let i = 0; i < len; i++) {
+                    const k = w.slice(0, i) + '_' + w.slice(i + 1);
+                    if (!buckets.has(k)) buckets.set(k, []);
+                    buckets.get(k).push(w);
+                }
+            }
+            const adj = new Map(words.map(w => [w, new Set()]));
+            buckets.forEach(list => {
+                for (let a = 0; a < list.length; a++) {
+                    for (let b = a + 1; b < list.length; b++) {
+                        adj.get(list[a]).add(list[b]);
+                        adj.get(list[b]).add(list[a]);
+                    }
+                }
+            });
+
+            const seen = new Set();
+            let core = [];
+            for (const w of words) {
+                if (seen.has(w)) continue;
+                const comp = [];
+                const stack = [w];
+                seen.add(w);
+                while (stack.length) {
+                    const x = stack.pop();
+                    comp.push(x);
+                    adj.get(x).forEach(y => { if (!seen.has(y)) { seen.add(y); stack.push(y); } });
+                }
+                if (comp.length > core.length) core = comp;
+            }
+            const coreSet = new Set(core);
+
+            let pool = core;
+            if (len !== 3) {
+                const common = (COMMON_DATA[len] || '').split(' ').filter(w => w && coreSet.has(w));
+                if (common.length >= 40) pool = common;
+            }
+
+            graphCache[len] = { dict, adj, core, coreSet, pool };
+            return graphCache[len];
+        }
+
+        function shuffleArray(arr) {
+            const a = [...arr];
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        // 9 words, all in the same connected cluster (so any start/target pair is solvable),
+        // none of them one letter away from another (so no trivial 1-step pairs).
+        function generateGrid(len) {
+            const g = getGraph(len);
+            const pool = shuffleArray(g.pool);
+            const chosen = [];
+            for (const w of pool) {
+                if (chosen.length === 9) break;
+                if (chosen.some(c => g.adj.get(w).has(c))) continue;
+                chosen.push(w);
+            }
+            for (const w of pool) {
+                if (chosen.length === 9) break;
+                if (!chosen.includes(w)) chosen.push(w);
+            }
+            return chosen;
+        }
+
+        // Fewest one-letter moves between two words (-1 if unreachable).
+        function shortestSteps(len, from, to) {
+            const g = getGraph(len);
+            if (!g.dict.has(from) || !g.dict.has(to)) return -1;
+            if (from === to) return 0;
+            const dist = new Map([[from, 0]]);
+            const queue = [from];
+            for (let qi = 0; qi < queue.length; qi++) {
+                const x = queue[qi];
+                for (const y of g.adj.get(x)) {
+                    if (dist.has(y)) continue;
+                    dist.set(y, dist.get(x) + 1);
+                    if (y === to) return dist.get(y);
+                    queue.push(y);
+                }
+            }
+            return -1;
+        }
+
+        function opponentOf(k) { return k === 'p1' ? 'p2' : 'p1'; }
+        function nameOf(data, k) { return (k === 'p1' ? data.p1Name : data.p2Name) || k.toUpperCase(); }
+        // The player who PLAYS gets words chosen by the other player.
+        function selectingPhaseFor(playingKey) { return playingKey === 'p1' ? 'p2_selecting' : 'p1_selecting'; }
+
+        function resetRoundFields(data) {
+            data.p1AssignedStart = null; data.p1AssignedTarget = null;
+            data.p2AssignedStart = null; data.p2AssignedTarget = null;
+            data.p1Surrendered = false; data.p2Surrendered = false;
+            data.p1Completed = false; data.p2Completed = false;
+            data.p1History = []; data.p2History = [];
+            data.p1TimeTaken = 0; data.p2TimeTaken = 0;
+            data.p1StartTime = null; data.p2StartTime = null;
+            data.roundWinner = null; data.roundWinReason = '';
+        }
+
+        const GAMING_EMBLEMS = {
+            gamepad: "fa-gamepad",
+            joystick: "fa-vr-cardboard",
+            lightning: "fa-bolt",
+            swords: "fa-khanda",
+            shield: "fa-shield-halved",
+            crosshair: "fa-crosshairs",
+            alien: "fa-ghost",
+            crystal: "fa-gem"
+        };
+
+        let myProfile = {
+            name: localStorage.getItem('morphic_name') || 'Operator_' + Math.floor(Math.random()*900 + 100),
+            emblem: localStorage.getItem('morphic_emblem') || 'gamepad'
+        };
+        let currentRoomCode = null;
+        let myRole = null; 
+        let unsubscribeRoom = null;
+
+        let selectedStart = null;
+        let selectedTarget = null;
+        let selectionTimerInterval = null;
+        let selectionTimeLeft = 30;
+
+        let solveTimerInterval = null;
+        let solveSecondsElapsed = 0;
+        let solveTimerKey = null;
+        let selectionKey = null;
+        let currentWordLength = 3;
+        let lastRoomData = null;
+        let gameOverShown = false;
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            if(!audioCtx) return;
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
+
+            if(type === 'click') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.exponentialRampToValueAtTime(800, now + 0.05);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+                osc.start(now); osc.stop(now + 0.05);
+            } else if(type === 'shift') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(1200, now + 0.15);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                osc.start(now); osc.stop(now + 0.15);
+            } else if(type === 'win') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(523.25, now);
+                osc.frequency.setValueAtTime(659.25, now + 0.1);
+                osc.frequency.setValueAtTime(783.99, now + 0.2);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                osc.start(now); osc.stop(now + 0.4);
+            } else if(type === 'error') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.setValueAtTime(100, now + 0.1);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.start(now); osc.stop(now + 0.2);
+            }
+        }
+        window.playSound = playSound;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('player-name-input').value = myProfile.name;
+            renderHeaderAvatar();
+            renderEmblemPicker();
+        });
+
+        function renderHeaderAvatar() {
+            const container = document.getElementById('header-avatar-svg-container');
+            if(container && GAMING_EMBLEMS[myProfile.emblem]) {
+                container.innerHTML = `<i class="fa-solid ${GAMING_EMBLEMS[myProfile.emblem]} text-neon-cyan text-base"></i>`;
+            }
+        }
+
+        function renderEmblemPicker() {
+            const grid = document.getElementById('emblem-options-grid');
+            if(!grid) return;
+            grid.innerHTML = '';
+            Object.keys(GAMING_EMBLEMS).forEach(key => {
+                const btn = document.createElement('button');
+                btn.className = `w-12 h-12 rounded-xl border ${myProfile.emblem === key ? 'border-cyan-400 bg-cyan-500/20 text-neon-cyan' : 'border-slate-700 bg-slate-900 text-slate-400'} hover:border-cyan-400 transition-all flex items-center justify-center text-lg`;
+                btn.innerHTML = `<i class="fa-solid ${GAMING_EMBLEMS[key]}"></i>`;
+                btn.onclick = () => {
+                    playSound('click');
+                    myProfile.emblem = key;
+                    localStorage.setItem('morphic_emblem', key);
+                    renderHeaderAvatar();
+                    renderEmblemPicker();
+                    toggleIconPickerModal();
+                };
+                grid.appendChild(btn);
+            });
+        }
+
+        function toggleIconPickerModal() {
+            document.getElementById('icon-picker-modal').classList.toggle('hidden');
+        }
+
+        function savePlayerName() {
+            const val = document.getElementById('player-name-input').value.trim();
+            if(val) {
+                myProfile.name = val;
+                localStorage.setItem('morphic_name', val);
+                const indicator = document.getElementById('name-save-indicator');
+                indicator.classList.remove('hidden');
+                setTimeout(() => indicator.classList.add('hidden'), 2500);
+            }
+        }
+
+        function showToast(msg, type='info') {
+            if(type === 'error') playSound('error');
+            else if(type === 'success') playSound('shift');
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `pointer-events-auto px-4 py-3 rounded-xl border text-xs font-mono shadow-lg transition-all ${type==='error'?'bg-rose-950/90 border-rose-500 text-rose-300':type==='success'?'bg-emerald-950/90 border-emerald-500 text-emerald-300':'bg-slate-900/90 border-cyan-500 text-cyan-300'}`;
+            toast.innerHTML = `<i class="fa-solid fa-bell mr-2"></i>${msg}`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+
+        window.toggleIconPickerModal = toggleIconPickerModal;
+        window.savePlayerName = savePlayerName;
+
+        window.checkRoomAvailability = async function(code) {
+            code = code.trim().toUpperCase();
+            const btnP1 = document.getElementById('btn-join-p1');
+            const btnP2 = document.getElementById('btn-join-p2');
+            if(!code || code.length !== 6 || !db) return;
+            try {
+                const snap = await getDoc(doc(db, "rooms", code));
+                if(snap.exists()) {
+                    const data = snap.data();
+                    if(data.p1Name && data.p1Name !== '------') {
+                        btnP1.disabled = true; btnP1.classList.add('opacity-40');
+                    } else { btnP1.disabled = false; btnP1.classList.remove('opacity-40'); }
+
+                    if(data.p2Name && data.p2Name !== '------') {
+                        btnP2.disabled = true; btnP2.classList.add('opacity-40');
+                    } else { btnP2.disabled = false; btnP2.classList.remove('opacity-40'); }
+                }
+            } catch(e) { console.error(e); }
+        };
+
+        window.createLobby = async function() {
+            const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+            currentRoomCode = code;
+            myRole = 'gm';
+
+            const roomData = {
+                status: 'waiting',
+                roomCode: code,
+                gmName: myProfile.name,
+                p1Name: '------',
+                p2Name: '------',
+                p1Score: 0,
+                p2Score: 0,
+                round: 1,
+                turnPhase: 'p2_selecting', 
+                kickedUsers: [],
+                wordLength: 3,
+                firstPlayer: 'p1',
+                gridWords: generateGrid(3)
+            };
+
+            if(db) {
+                try {
+                    await setDoc(doc(db, "rooms", code), roomData);
+                } catch(e) { console.error(e); }
+            }
+
+            enterWaitingView(code);
+            if(db) listenToRoom(code);
+        };
+
+        window.joinLobby = async function(requestedRole) {
+            const code = document.getElementById('join-room-input').value.trim().toUpperCase();
+            if(!code || code.length !== 6) {
+                showToast("Please enter a valid 6-character room code.", "error");
+                return;
+            }
+            currentRoomCode = code;
+            
+            if(db) {
+                try {
+                    const roomRef = doc(db, "rooms", code);
+                    const snap = await getDoc(roomRef);
+                    if(!snap.exists()) {
+                        showToast("Room code not found.", "error");
+                        return;
+                    }
+                    const data = snap.data();
+
+                    const existingNames = [data.gmName, data.p1Name, data.p2Name].filter(n => n && n !== '------');
+                    if(existingNames.includes(myProfile.name)) {
+                        showToast("Name already exists in room! Please change your name.", "error");
+                        return;
+                    }
+
+                    if(requestedRole === 'p1') {
+                        if(data.p1Name && data.p1Name !== '------') {
+                            showToast("Player 1 slot is already taken!", "error");
+                            return;
+                        }
+                        data.p1Name = myProfile.name;
+                        myRole = 'p1';
+                    } else if(requestedRole === 'p2') {
+                        if(data.p2Name && data.p2Name !== '------') {
+                            showToast("Player 2 slot is already taken!", "error");
+                            return;
+                        }
+                        data.p2Name = myProfile.name;
+                        myRole = 'p2';
+                    }
+
+                    await updateDoc(roomRef, data);
+                    listenToRoom(code);
+                } catch(e) { console.error(e); }
+            }
+            enterWaitingView(code);
+        };
+
+        function getRandom9HardWords(len) {
+            return generateGrid(len || currentWordLength || 3);
+        }
+
+        // Difficulty picker (GM can click, everyone else sees the current choice)
+        function renderDifficultyPicker(containerId, data) {
+            const el = document.getElementById(containerId);
+            if (!el) return;
+            const cur = data.wordLength || 3;
+            const isGM = (myRole === 'gm');
+            el.innerHTML = '';
+            [3, 4, 5, 6].forEach(n => {
+                const info = DIFFICULTY_INFO[n];
+                const btn = document.createElement('button');
+                const active = (n === cur);
+                btn.className = `py-2.5 px-2 rounded-xl border font-orbitron text-center transition-all ${active ? 'border-amber-400 bg-amber-500/20 text-amber-300 shadow-[0_0_12px_rgba(255,170,0,0.35)]' : 'border-slate-700 bg-slate-900 text-slate-400'} ${isGM ? 'hover:border-amber-400 cursor-pointer' : 'cursor-default'}`;
+                btn.innerHTML = `<div class="text-lg font-black">${n}</div><div class="text-[9px] tracking-widest">${info.name}</div>`;
+                if (isGM) btn.onclick = () => setDifficulty(n);
+                el.appendChild(btn);
+            });
+            const hint = document.getElementById(containerId + '-hint');
+            if (hint) hint.innerText = DIFFICULTY_INFO[cur].desc + (isGM ? ' (Tap to change.)' : ' (Game Master chooses.)');
+        }
+
+        window.setDifficulty = async function(len) {
+            if (myRole !== 'gm' || !db || !currentRoomCode) return;
+            playSound('click');
+            await updateDoc(doc(db, "rooms", currentRoomCode), { wordLength: len });
+        };
+
+        function enterWaitingView(code) {
+            document.getElementById('view-lobby').classList.add('hidden');
+            document.getElementById('view-waiting').classList.remove('hidden');
+            document.getElementById('waiting-code-display').innerText = code;
+            document.getElementById('display-room-code').innerText = code;
+            document.getElementById('room-code-tag').classList.remove('hidden');
+            document.getElementById('header-score-badge').classList.remove('hidden');
+            showToast("Successfully entered room!", "success");
+        }
+
+        window.copyRoomCode = function() {
+            navigator.clipboard.writeText(currentRoomCode);
+            showToast("Room code copied to clipboard!", "success");
+        };
+
+        window.leaveLobby = function() {
+            if(unsubscribeRoom) unsubscribeRoom();
+            currentRoomCode = null;
+            myRole = null;
+            stopSelectionTimer();
+            stopSolveTimer();
+            document.getElementById('view-waiting').classList.add('hidden');
+            document.getElementById('view-drafting').classList.add('hidden');
+            document.getElementById('view-game').classList.add('hidden');
+            ['game-over-modal', 'round-end-modal', 'end-game-confirm-modal', 'gm-end-game-btn'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            lastRoomData = null;
+            gameOverShown = false;
+            solveTimerKey = null;
+            selectionKey = null;
+            document.getElementById('view-lobby').classList.remove('hidden');
+            document.getElementById('room-code-tag').classList.add('hidden');
+            document.getElementById('header-score-badge').classList.add('hidden');
+        };
+
+        window.kickUser = async function(targetType) {
+            if(myRole !== 'gm' || !currentRoomCode) return;
+            if(db) {
+                const roomRef = doc(db, "rooms", currentRoomCode);
+                const snap = await getDoc(roomRef);
+                if(!snap.exists()) return;
+                const data = snap.data();
+
+                if(targetType === 'p1') {
+                    if(!data.kickedUsers) data.kickedUsers = [];
+                    data.kickedUsers.push(data.p1Name);
+                    data.p1Name = '------';
+                } else if(targetType === 'p2') {
+                    if(!data.kickedUsers) data.kickedUsers = [];
+                    data.kickedUsers.push(data.p2Name);
+                    data.p2Name = '------';
+                }
+                await updateDoc(roomRef, data);
+            }
+        };
+
+        window.gmStartGame = async function() {
+            if(myRole !== 'gm' || !currentRoomCode) return;
+            if(db) {
+                const roomRef = doc(db, "rooms", currentRoomCode);
+                const snap = await getDoc(roomRef);
+                if(!snap.exists()) return;
+                const data = snap.data();
+
+                if(data.p1Name === '------' || data.p2Name === '------') {
+                    showToast("Both Player 1 and Player 2 must be present to start!", "error");
+                    return;
+                }
+
+                const len = data.wordLength || 3;
+                data.wordLength = len;
+                data.round = 1;
+                data.p1Score = 0; data.p2Score = 0;
+                data.firstPlayer = 'p1';
+                resetRoundFields(data);
+                data.status = 'drafting';
+                data.turnPhase = selectingPhaseFor('p1');
+                data.gridWords = generateGrid(len);
+                await updateDoc(roomRef, data);
+                showToast("Game started by Game Master!", "success");
+            }
+        };
+
+        function listenToRoom(code) {
+            if(!db) return;
+            unsubscribeRoom = onSnapshot(doc(db, "rooms", code), (docSnap) => {
+                if(!docSnap.exists()) return;
+                const data = docSnap.data();
+
+                if(data.kickedUsers && data.kickedUsers.includes(myProfile.name)) {
+                    showToast("You have been kicked by Game Master.", "error");
+                    leaveLobby();
+                    return;
+                }
+
+                updateUIFromRoomData(data);
+            });
+        }
+
+        function updateUIFromRoomData(data) {
+            currentWordLength = data.wordLength || 3;
+            lastRoomData = data;
+
+            const gmEndBtn = document.getElementById('gm-end-game-btn');
+            gmEndBtn.classList.toggle('hidden', !(myRole === 'gm' && ['drafting', 'playing', 'round_ended'].includes(data.status)));
+            if (data.status === 'game_over') {
+                stopSelectionTimer();
+                stopSolveTimer();
+                solveTimerKey = null;
+                selectionKey = null;
+                document.getElementById('end-game-confirm-modal').classList.add('hidden');
+                renderGameOver(data);
+            } else {
+                gameOverShown = false;
+                document.getElementById('game-over-modal').classList.add('hidden');
+            }
+
+            const roundEndModal = document.getElementById('round-end-modal');
+            if (data.status === 'round_ended') {
+                stopSolveTimer();
+                solveTimerKey = null;
+                triggerRoundEndModal(data);
+            } else {
+                roundEndModal.classList.add('hidden');
+            }
+
+            document.getElementById('gm-slot-name').innerText = data.gmName || 'NONE';
+            document.getElementById('p1-slot-name').innerText = data.p1Name || '------';
+            document.getElementById('p2-slot-name').innerText = data.p2Name || '------';
+            document.getElementById('mode-subtitle').innerText = `${currentWordLength}-LETTER DUEL WITH GM CONTROL`;
+            renderDifficultyPicker('difficulty-picker-waiting', data);
+
+            const isGM = (myRole === 'gm');
+            document.getElementById('gm-kick-p1-container').classList.toggle('hidden', !isGM || !data.p1Name || data.p1Name === '------');
+            document.getElementById('gm-kick-p2-container').classList.toggle('hidden', !isGM || !data.p2Name || data.p2Name === '------');
+
+            if(isGM && data.status === 'waiting') {
+                document.getElementById('gm-start-game-container').classList.remove('hidden');
+                document.getElementById('waiting-gm-start-msg').classList.add('hidden');
+            } else if(data.status === 'waiting') {
+                document.getElementById('gm-start-game-container').classList.add('hidden');
+                document.getElementById('waiting-gm-start-msg').classList.remove('hidden');
+            }
+
+            document.getElementById('p1-score-val').innerText = `${data.p1Score || 0} pts`;
+            document.getElementById('p2-score-val').innerText = `${data.p2Score || 0} pts`;
+            document.getElementById('p1-name-score-tag').innerText = (data.p1Name && data.p1Name !== '------' ? data.p1Name : 'P1').substring(0,6);
+            document.getElementById('p2-name-score-tag').innerText = (data.p2Name && data.p2Name !== '------' ? data.p2Name : 'P2').substring(0,6);
+
+            if(data.status === 'waiting') {
+                stopSelectionTimer();
+                stopSolveTimer();
+                solveTimerKey = null;
+                selectionKey = null;
+                document.getElementById('view-waiting').classList.remove('hidden');
+                document.getElementById('view-drafting').classList.add('hidden');
+                document.getElementById('view-game').classList.add('hidden');
+            } else if(data.status === 'drafting') {
+                stopSolveTimer();
+                solveTimerKey = null;
+                document.getElementById('view-waiting').classList.add('hidden');
+                document.getElementById('view-game').classList.add('hidden');
+                document.getElementById('view-drafting').classList.remove('hidden');
+                renderFlashingGridUI(data);
+            } else if(data.status === 'playing') {
+                stopSelectionTimer();
+                selectionKey = null;
+                document.getElementById('view-waiting').classList.add('hidden');
+                document.getElementById('view-drafting').classList.add('hidden');
+                document.getElementById('view-game').classList.remove('hidden');
+                renderGameBoards(data);
+                syncSolveTimer(data);
+            } else if(data.status === 'round_ended' || data.status === 'game_over') {
+                stopSelectionTimer();
+                selectionKey = null;
+                document.getElementById('view-waiting').classList.add('hidden');
+                document.getElementById('view-drafting').classList.add('hidden');
+                document.getElementById('view-game').classList.remove('hidden');
+                renderGameBoards(data);
+            }
+        }
+
+        // ---------------- End game / declare winner ----------------
+        window.openEndGameConfirm = function() {
+            if (myRole !== 'gm' || !lastRoomData) return;
+            const d = lastRoomData;
+            const p1 = d.p1Score || 0, p2 = d.p2Score || 0;
+            const leader = p1 > p2 ? `${d.p1Name} wins` : (p2 > p1 ? `${d.p2Name} wins` : 'Draw');
+            document.getElementById('end-game-preview').innerHTML = `
+                <div class="flex justify-between"><span>${d.p1Name}</span><span class="text-white font-bold">${p1} pts</span></div>
+                <div class="flex justify-between"><span>${d.p2Name}</span><span class="text-white font-bold">${p2} pts</span></div>
+                <div class="border-t border-slate-800 pt-1 mt-1 text-amber-400 font-bold text-center">${leader} if ended now</div>`;
+            document.getElementById('end-game-confirm-modal').classList.remove('hidden');
+        };
+
+        window.closeEndGameConfirm = function() {
+            document.getElementById('end-game-confirm-modal').classList.add('hidden');
+        };
+
+        window.endGameByGM = async function() {
+            if (myRole !== 'gm' || !db || !currentRoomCode) return;
+            const roomRef = doc(db, "rooms", currentRoomCode);
+            const snap = await getDoc(roomRef);
+            if (!snap.exists()) return;
+            const data = snap.data();
+            if (!['drafting', 'playing', 'round_ended'].includes(data.status)) { closeEndGameConfirm(); return; }
+
+            const p1 = data.p1Score || 0, p2 = data.p2Score || 0;
+            const scoredRound = (data.status === 'round_ended');
+            data.gameWinner = p1 > p2 ? 'p1' : (p2 > p1 ? 'p2' : 'draw');
+            data.roundsPlayed = scoredRound ? (data.round || 1) : Math.max(0, (data.round || 1) - 1);
+            data.endedMidRound = !scoredRound;
+            data.status = 'game_over';
+            await updateDoc(roomRef, data);
+            closeEndGameConfirm();
+        };
+
+        function renderGameOver(data) {
+            const modal = document.getElementById('game-over-modal');
+            modal.classList.remove('hidden');
+            document.getElementById('round-end-modal').classList.add('hidden');
+
+            const p1 = data.p1Score || 0, p2 = data.p2Score || 0;
+            const title = document.getElementById('game-over-title');
+            if (data.gameWinner === 'draw') title.innerText = "IT'S A DRAW!";
+            else title.innerText = `${(data.gameWinner === 'p1' ? data.p1Name : data.p2Name)} WINS!`;
+
+            document.getElementById('game-over-summary').innerHTML = `
+                <div class="flex justify-between ${data.gameWinner === 'p1' ? 'text-amber-300 font-bold' : ''}"><span>${data.p1Name}</span><span class="text-white">${p1} pts</span></div>
+                <div class="flex justify-between ${data.gameWinner === 'p2' ? 'text-amber-300 font-bold' : ''}"><span>${data.p2Name}</span><span class="text-white">${p2} pts</span></div>
+                <div class="border-t border-slate-800 pt-2 flex justify-between"><span>ROUNDS SCORED</span><span class="text-white">${data.roundsPlayed || 0}</span></div>
+                <div class="flex justify-between"><span>WORD LENGTH</span><span class="text-white">${data.wordLength || 3} LETTERS</span></div>
+                ${data.endedMidRound ? '<div class="text-slate-400 italic">Game ended by the Game Master during a round. That round was not scored.</div>' : ''}`;
+
+            const isGM = (myRole === 'gm');
+            document.getElementById('game-over-gm-actions').classList.toggle('hidden', !isGM);
+            document.getElementById('game-over-player-msg').classList.toggle('hidden', isGM);
+
+            if (!gameOverShown) { gameOverShown = true; playSound('win'); }
+        }
+
+        window.gmNewGame = async function() {
+            if (myRole !== 'gm' || !db || !currentRoomCode) return;
+            const roomRef = doc(db, "rooms", currentRoomCode);
+            const snap = await getDoc(roomRef);
+            if (!snap.exists()) return;
+            const data = snap.data();
+            if (data.status !== 'game_over') return;
+            data.status = 'waiting';
+            data.round = 1;
+            data.p1Score = 0; data.p2Score = 0;
+            data.firstPlayer = 'p1';
+            data.turnPhase = 'p2_selecting';
+            data.gameWinner = null;
+            data.roundsPlayed = 0;
+            data.endedMidRound = false;
+            resetRoundFields(data);
+            data.gridWords = generateGrid(data.wordLength || 3);
+            await updateDoc(roomRef, data);
+        };
+
+        window.toggleDisclaimer = function() {
+            document.getElementById('disclaimer-modal').classList.toggle('hidden');
+        };
+
+        function renderFlashingGridUI(data) {
+            const isP2Selecting = (data.turnPhase === 'p2_selecting');
+            const selectorKey = isP2Selecting ? 'p2' : 'p1';
+            const playerKey = opponentOf(selectorKey);
+            const selectorName = nameOf(data, selectorKey);
+            const playerName = nameOf(data, playerKey);
+            const len = data.wordLength || 3;
+
+            // Turn 2 of a round = somebody has already finished their ladder.
+            const secondTurn = !!(data.p1Completed || data.p1Surrendered || data.p2Completed || data.p2Surrendered);
+
+            const badge = document.getElementById('drafting-phase-badge');
+            const title = document.getElementById('drafting-header-title');
+            const sub = document.getElementById('drafting-subtitle');
+            const recap = document.getElementById('drafting-recap');
+            const card = document.getElementById('word-selection-card-container');
+            const waitingMsg = document.getElementById('waiting-word-lock-msg');
+
+            badge.innerText = `ROUND ${data.round || 1} // TURN ${secondTurn ? 2 : 1} OF 2`;
+            title.innerText = `WORDS FOR ${playerName.toUpperCase()}`;
+
+            if (secondTurn) {
+                const k = selectorKey; // the player who just finished is the one selecting
+                const result = data[`${k}Surrendered`]
+                    ? `${selectorName} surrendered.`
+                    : `${selectorName} solved it in ${(data[`${k}History`] || []).length} words (${data[`${k}TimeTaken`] || 0}s).`;
+                recap.innerText = `${result} Now it's ${playerName}'s turn to play.`;
+                recap.classList.remove('hidden');
+            } else {
+                recap.classList.add('hidden');
+            }
+
+            if (myRole === 'gm') {
+                card.classList.add('hidden');
+                waitingMsg.classList.remove('hidden');
+                waitingMsg.innerText = `${selectorName} is choosing start and target words for ${playerName}...`;
+                sub.innerText = `Spectating. ${len}-letter words.`;
+                stopSelectionTimer();
+                selectionKey = null;
+                return;
+            }
+
+            if (myRole === selectorKey) {
+                card.classList.remove('hidden');
+                waitingMsg.classList.add('hidden');
+                sub.innerText = `Pick a START and a TARGET word from the 9 ${len}-letter words. ${playerName} must ladder from START to TARGET.`;
+
+                const key = `${data.round}-${data.turnPhase}`;
+                if (selectionKey !== key) {
+                    selectionKey = key;
+                    selectedStart = null;
+                    selectedTarget = null;
+                    updateSelectionDisps();
+                    startSelectionTimer();
+                }
+                renderFlashingGrid(data.gridWords || generateGrid(len));
+            } else {
+                stopSelectionTimer();
+                selectionKey = null;
+                card.classList.add('hidden');
+                sub.innerText = `Get ready. You'll be laddering ${len}-letter words.`;
+                waitingMsg.innerText = `${selectorName} is choosing start and target words for ${playerName}...`;
+                waitingMsg.classList.remove('hidden');
+            }
+        }
+
+        function startSelectionTimer() {
+            stopSelectionTimer();
+            selectionTimeLeft = 30;
+            const timerEl = document.getElementById('selection-timer');
+            if(timerEl) timerEl.innerText = selectionTimeLeft;
+
+            selectionTimerInterval = setInterval(() => {
+                selectionTimeLeft--;
+                if(timerEl) timerEl.innerText = Math.max(0, selectionTimeLeft);
+                if(selectionTimeLeft <= 0) {
+                    stopSelectionTimer();
+                    autoLockSelectionDueToTimeout();
+                }
+            }, 1000);
+        }
+
+        function stopSelectionTimer() {
+            if(selectionTimerInterval) {
+                clearInterval(selectionTimerInterval);
+                selectionTimerInterval = null;
+            }
+        }
+
+        async function autoLockSelectionDueToTimeout() {
+            if(!currentRoomCode || !db) return;
+            const roomRef = doc(db, "rooms", currentRoomCode);
+            const snap = await getDoc(roomRef);
+            if(!snap.exists()) return;
+            const data = snap.data();
+            if(data.status !== 'drafting') return;
+            const words = data.gridWords || generateGrid(data.wordLength || 3);
+
+            if(!selectedStart) selectedStart = words.find(w => w !== selectedTarget) || words[0];
+            if(!selectedTarget) selectedTarget = words.find(w => w !== selectedStart) || words[1];
+
+            showToast("Time expired! Auto-locking selections.", "error");
+            await lockInFlashingSelection();
+        }
+
+        function renderFlashingGrid(wordsArr) {
+            const grid = document.getElementById('flashing-words-grid');
+            grid.innerHTML = '';
+            (wordsArr || getRandom9HardWords()).forEach(w => {
+                const btn = document.createElement('button');
+                btn.className = "word-font py-4 px-2 bg-slate-950 border border-cyan-500/30 rounded-xl text-white text-sm sm:text-base hover:border-neon-cyan hover:shadow-[0_0_15px_rgba(0,243,255,0.4)] transition-all uppercase";
+                btn.innerText = w;
+
+                if(selectedStart === w) {
+                    btn.className += " border-cyan-400 bg-cyan-950 text-neon-cyan shadow-[0_0_15px_rgba(0,243,255,0.5)]";
+                } else if(selectedTarget === w) {
+                    btn.className += " border-pink-500 bg-pink-950 text-neon-magenta shadow-[0_0_15px_rgba(255,0,85,0.5)]";
+                }
+
+                btn.onclick = () => {
+                    playSound('click');
+                    if(selectedStart === w) {
+                        selectedStart = null;
+                    } else if(selectedTarget === w) {
+                        selectedTarget = null;
+                    } else if(!selectedStart) {
+                        selectedStart = w;
+                    } else if(!selectedTarget && w !== selectedStart) {
+                        selectedTarget = w;
+                    }
+                    updateSelectionDisps();
+                    renderFlashingGrid(wordsArr);
+                };
+                grid.appendChild(btn);
+            });
+        }
+
+        function updateSelectionDisps() {
+            document.getElementById('selected-start-disp').innerText = selectedStart ? selectedStart.toUpperCase() : 'NONE';
+            document.getElementById('selected-target-disp').innerText = selectedTarget ? selectedTarget.toUpperCase() : 'NONE';
+            const btn = document.getElementById('confirm-word-lock-btn');
+            const par = document.getElementById('selection-par-disp');
+            if (selectedStart && selectedTarget) {
+                const n = shortestSteps(currentWordLength, selectedStart, selectedTarget);
+                if (n > 0) {
+                    par.innerHTML = `Shortest possible ladder: <span class="font-bold text-white">${n}</span> step${n === 1 ? '' : 's'}`;
+                    btn.disabled = false;
+                } else {
+                    par.innerText = 'No ladder exists between these words. Pick another pair.';
+                    btn.disabled = true;
+                }
+            } else {
+                par.innerText = 'Pick a START word, then a TARGET word.';
+                btn.disabled = true;
+            }
+        }
+
+        window.reshuffleWordGrid = async function() {
+            playSound('click');
+            selectedStart = null;
+            selectedTarget = null;
+            updateSelectionDisps();
+
+            if(currentRoomCode && db) {
+                const roomRef = doc(db, "rooms", currentRoomCode);
+                const newWords = generateGrid(currentWordLength);
+                await updateDoc(roomRef, { gridWords: newWords });
+                renderFlashingGrid(newWords);
+                showToast("Word grid reshuffled and selections cleared!", "success");
+            }
+        };
+
+        window.lockInFlashingSelection = async function() {
+            if(!selectedStart || !selectedTarget || !currentRoomCode || !db) return;
+            stopSelectionTimer();
+            const roomRef = doc(db, "rooms", currentRoomCode);
+            const snap = await getDoc(roomRef);
+            if(!snap.exists()) return;
+            const data = snap.data();
+            if(data.status !== 'drafting') return;
+
+            const len = data.wordLength || 3;
+            if(shortestSteps(len, selectedStart, selectedTarget) < 1) {
+                showToast("Those words can't be connected. Pick another pair.", "error");
+                return;
+            }
+
+            const nowTime = Date.now();
+            if(data.turnPhase === 'p2_selecting' && myRole === 'p2') {
+                data.p1AssignedStart = selectedStart;
+                data.p1AssignedTarget = selectedTarget;
+                data.p1History = [selectedStart];
+                data.p1StartTime = nowTime;
+                data.status = 'playing';
+                data.turnPhase = 'p1_playing';
+            } else if(data.turnPhase === 'p1_selecting' && myRole === 'p1') {
+                data.p2AssignedStart = selectedStart;
+                data.p2AssignedTarget = selectedTarget;
+                data.p2History = [selectedStart];
+                data.p2StartTime = nowTime;
+                data.status = 'playing';
+                data.turnPhase = 'p2_playing';
+            } else {
+                return;
+            }
+
+            selectedStart = null;
+            selectedTarget = null;
+            await updateDoc(roomRef, data);
+            showToast("Words locked in! Shift battle initiated.", "success");
+        };
+
+        function stopSolveTimer() {
+            if(solveTimerInterval) {
+                clearInterval(solveTimerInterval);
+                solveTimerInterval = null;
+            }
+        }
+
+        // The solve clock is derived from the shared start time, so every client
+        // (players and GM) sees the same running timer.
+        function syncSolveTimer(data) {
+            const disp = document.getElementById('solve-timer-disp');
+            const activeKey = data.turnPhase === 'p1_playing' ? 'p1' : (data.turnPhase === 'p2_playing' ? 'p2' : null);
+            const start = activeKey ? data[`${activeKey}StartTime`] : null;
+            const finished = activeKey && (data[`${activeKey}Completed`] || data[`${activeKey}Surrendered`]);
+
+            if (!activeKey || !start || finished) {
+                stopSolveTimer();
+                solveTimerKey = null;
+                if (disp && activeKey && finished) disp.innerText = data[`${activeKey}TimeTaken`] || 0;
+                return;
+            }
+
+            const key = `${data.round}-${activeKey}-${start}`;
+            if (solveTimerKey === key && solveTimerInterval) return;
+            solveTimerKey = key;
+            stopSolveTimer();
+            const tick = () => { if (disp) disp.innerText = Math.max(0, Math.floor((Date.now() - start) / 1000)); };
+            tick();
+            solveTimerInterval = setInterval(tick, 1000);
+        }
+
+        function renderGameBoards(data) {
+            const len = data.wordLength || 3;
+            const activeKey = data.turnPhase === 'p1_playing' ? 'p1' : (data.turnPhase === 'p2_playing' ? 'p2' : null);
+            const live = (data.status === 'playing');
+
+            document.getElementById('p1-card-name').innerText = data.p1Name || 'Player 1';
+            document.getElementById('p2-card-name').innerText = data.p2Name || 'Player 2';
+            document.getElementById('p1-score-in-board').innerText = `${data.p1Score || 0} PTS`;
+            document.getElementById('p2-score-in-board').innerText = `${data.p2Score || 0} PTS`;
+
+            document.getElementById('p1-start-disp').innerText = data.p1AssignedStart || '---';
+            document.getElementById('p1-target-disp').innerText = data.p1AssignedTarget || '---';
+            document.getElementById('p2-start-disp').innerText = data.p2AssignedStart || '---';
+            document.getElementById('p2-target-disp').innerText = data.p2AssignedTarget || '---';
+
+            renderHistoryList('p1', data.p1History || []);
+            renderHistoryList('p2', data.p2History || []);
+
+            ['p1', 'p2'].forEach(k => {
+                const zone = document.getElementById(`${k}-input-zone`);
+                const box = document.getElementById(`${k}-move-input`);
+                const canPlay = live && myRole === k && activeKey === k && !data[`${k}Completed`] && !data[`${k}Surrendered`];
+                zone.style.opacity = canPlay ? "1" : "0.4";
+                box.disabled = !canPlay;
+                box.maxLength = len;
+                box.placeholder = `Enter ${len}-letter word...`;
+                zone.querySelectorAll('button').forEach(b => { b.disabled = !canPlay; });
+                const card = document.getElementById(`${k}-board-card`);
+                const ringCls = k === 'p1' ? 'ring-cyan-400/70' : 'ring-pink-500/70';
+                card.classList.toggle('ring-2', live && activeKey === k);
+                card.classList.toggle(ringCls, live && activeKey === k);
+                if (canPlay && document.activeElement !== box && !box.value) box.focus();
+            });
+
+            const status = (k) => {
+                if (data[`${k}Surrendered`]) return 'SURRENDERED';
+                if (data[`${k}Completed`]) return 'SOLVED';
+                if (live && activeKey === k) return 'SOLVING';
+                return 'WAITING';
+            };
+            const head = (live && activeKey) ? `${nameOf(data, activeKey).toUpperCase()} IS SOLVING` : 'ROUND COMPLETE';
+            document.getElementById('turn-indicator').innerText = `ROUND ${data.round || 1} // ${head}  (P1: ${status('p1')} | P2: ${status('p2')})`;
+            document.getElementById('gm-announcement').innerText = `GM: ${data.gmName} // ${len}-LETTER`;
+        }
+
+        function renderHistoryList(playerKey, historyArr) {
+            const container = document.getElementById(`${playerKey}-word-history`);
+            if(!container) return;
+            container.innerHTML = '';
+            const list = historyArr || [];
+            list.forEach((w, idx) => {
+                const isLatest = (idx === list.length - 1);
+                const div = document.createElement('div');
+                div.className = `flex items-center justify-between px-3 py-2 rounded-xl border font-orbitron text-xs ${isLatest ? 'bg-slate-800 border-cyan-400/60' : 'bg-slate-900 border-slate-800'}`;
+                div.innerHTML = `<span class="text-slate-400">#${idx+1}</span><span class="word-font text-white text-base">${w.toUpperCase()}</span>`;
+                container.appendChild(div);
+            });
+            // Keep the newest word in view (set synchronously so there is no flicker on re-render)
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Called whenever a player's ladder ends (solved or surrendered).
+        // - Opponent already played?  -> score the round.
+        // - Otherwise                  -> this player now picks words for the opponent.
+        async function finishTurn(roomRef, data, key) {
+            stopSolveTimer();
+            solveTimerKey = null;
+            const other = opponentOf(key);
+            const otherFinished = data[`${other}Completed`] || data[`${other}Surrendered`];
+
+            if (otherFinished) {
+                await concludeRound(roomRef, data);
+                return;
+            }
+
+            data.status = 'drafting';
+            data.turnPhase = selectingPhaseFor(other);   // finisher selects for the opponent
+            data.gridWords = generateGrid(data.wordLength || 3);
+            await updateDoc(roomRef, data);
+        }
+
+        window.submitMove = async function(playerKey) {
+            if(myRole !== playerKey || !db || !currentRoomCode) return;
+            const input = document.getElementById(`${playerKey}-move-input`);
+            const word = input.value.trim().toLowerCase();
+
+            const roomRef = doc(db, "rooms", currentRoomCode);
+            const snap = await getDoc(roomRef);
+            if(!snap.exists()) return;
+            const data = snap.data();
+
+            if(data.status !== 'playing' || data.turnPhase !== `${playerKey}_playing`) {
+                showToast("It's not your turn to solve.", "error"); return;
+            }
+
+            const len = data.wordLength || 3;
+            const g = getGraph(len);
+            if(word.length !== len || !g.dict.has(word)) {
+                showToast(`Must be a valid ${len}-letter word.`, "error"); return;
+            }
+
+            const history = [...(data[`${playerKey}History`] || [])];
+            const prevWord = history[history.length - 1];
+            const targetWord = data[`${playerKey}AssignedTarget`];
+
+            let diffs = 0;
+            for(let i = 0; i < len; i++) { if(prevWord[i] !== word[i]) diffs++; }
+            if(diffs !== 1) { showToast("Must change exactly 1 letter.", "error"); return; }
+
+            input.value = '';
+            history.push(word);
+            data[`${playerKey}History`] = history;
+
+            if(word === targetWord) {
+                data[`${playerKey}Completed`] = true;
+                data[`${playerKey}TimeTaken`] = Math.floor((Date.now() - (data[`${playerKey}StartTime`] || Date.now())) / 1000);
+                playSound('win');
+                showToast("You solved the target word!", "success");
+                await finishTurn(roomRef, data, playerKey);
+                return;
+            }
+
+            showToast(`Shifted to ${word.toUpperCase()}!`, "success");
+            await updateDoc(roomRef, data);
+        };
+
+        window.surrenderMatch = async function(playerKey) {
+            if(myRole !== playerKey || !db || !currentRoomCode) return;
+            const roomRef = doc(db, "rooms", currentRoomCode);
+            const snap = await getDoc(roomRef);
+            if(!snap.exists()) return;
+            const data = snap.data();
+            if(data.status !== 'playing' || data.turnPhase !== `${playerKey}_playing`) return;
+
+            playSound('error');
+            data[`${playerKey}Surrendered`] = true;
+            data[`${playerKey}Completed`] = true;
+            data[`${playerKey}TimeTaken`] = Math.floor((Date.now() - (data[`${playerKey}StartTime`] || Date.now())) / 1000);
+            await finishTurn(roomRef, data, playerKey);
+        };
+
+        async function concludeRound(roomRef, data) {
+            data.status = 'round_ended';
+
+            const p1Done = data.p1Completed && !data.p1Surrendered;
+            const p2Done = data.p2Completed && !data.p2Surrendered;
+
+            const p1WordsCount = (data.p1History || []).length;
+            const p2WordsCount = (data.p2History || []).length;
+            const p1Time = data.p1TimeTaken || 0;
+            const p2Time = data.p2TimeTaken || 0;
+
+            let roundWinner = 'draw';
+            let winReason = '';
+
+            if (p1Done && !p2Done) {
+                roundWinner = 'p1';
+                winReason = `${data.p1Name} completed the target word (Priority).`;
+            } else if (p2Done && !p1Done) {
+                roundWinner = 'p2';
+                winReason = `${data.p2Name} completed the target word (Priority).`;
+            } else if (!p1Done && !p2Done) {
+                roundWinner = 'draw';
+                winReason = `Both players surrendered. No points awarded.`;
+            } else if (p1WordsCount < p2WordsCount) {
+                roundWinner = 'p1';
+                winReason = `${data.p1Name} used fewer words (${p1WordsCount} vs ${p2WordsCount}).`;
+            } else if (p2WordsCount < p1WordsCount) {
+                roundWinner = 'p2';
+                winReason = `${data.p2Name} used fewer words (${p2WordsCount} vs ${p1WordsCount}).`;
+            } else if (p1Time < p2Time) {
+                roundWinner = 'p1';
+                winReason = `Tie on word count! ${data.p1Name} was faster (${p1Time}s vs ${p2Time}s).`;
+            } else if (p2Time < p1Time) {
+                roundWinner = 'p2';
+                winReason = `Tie on word count! ${data.p2Name} was faster (${p2Time}s vs ${p1Time}s).`;
+            } else {
+                roundWinner = 'draw';
+                winReason = `Exact tie on words and time. No points awarded.`;
+            }
+
+            data.roundWinner = roundWinner;
+            data.roundWinReason = winReason;
+
+            if(roundWinner === 'p1') data.p1Score = (data.p1Score || 0) + 1;
+            else if(roundWinner === 'p2') data.p2Score = (data.p2Score || 0) + 1;
+
+            await updateDoc(roomRef, data);
+        }
+
+        function nextFirstPlayer(data) {
+            if (data.roundWinner === 'p1') return 'p2';          // loser goes first
+            if (data.roundWinner === 'p2') return 'p1';
+            return opponentOf(data.firstPlayer || 'p1');          // draw: swap order
+        }
+
+        function triggerRoundEndModal(data) {
+            const modal = document.getElementById('round-end-modal');
+            modal.classList.remove('hidden');
+
+            if (data.roundWinner === 'draw') {
+                document.getElementById('round-winner-title').innerText = 'ROUND DRAWN!';
+            } else {
+                const winnerName = data.roundWinner === 'p1' ? data.p1Name : data.p2Name;
+                document.getElementById('round-winner-title').innerText = `ROUND WINNER: ${winnerName}!`;
+            }
+
+            const p1Words = data.p1Surrendered ? 'Surrendered' : `${(data.p1History || []).length} words`;
+            const p2Words = data.p2Surrendered ? 'Surrendered' : `${(data.p2History || []).length} words`;
+            const p1Time = `${data.p1TimeTaken || 0}s`;
+            const p2Time = `${data.p2TimeTaken || 0}s`;
+
+            document.getElementById('standings-summary').innerHTML = `
+                <div class="font-bold text-cyan-400 mb-1">RATIONALE:</div>
+                <div class="text-slate-300 text-xs sm:text-sm mb-3 italic">${data.roundWinReason || 'Scored by Priority, Word Count, and Time.'}</div>
+                <div class="border-t border-slate-800 pt-2 space-y-1">
+                    <div class="flex justify-between"><span>${data.p1Name} Stats:</span><span class="font-mono text-white">${p1Words} | ${p1Time}</span></div>
+                    <div class="flex justify-between"><span>${data.p2Name} Stats:</span><span class="font-mono text-white">${p2Words} | ${p2Time}</span></div>
+                </div>
+                <div class="border-t border-slate-800 pt-2 mt-2 flex justify-between font-bold text-white"><span>TOTAL POINTS</span><span>P1: ${data.p1Score||0} | P2: ${data.p2Score||0}</span></div>
+            `;
+
+            const nextFirst = nextFirstPlayer(data);
+            document.getElementById('next-round-info').innerText =
+                `${nameOf(data, nextFirst)} plays first next round` + (data.roundWinner === 'draw' ? ' (order swapped)' : ' (round loser)');
+            renderDifficultyPicker('difficulty-picker-modal', data);
+
+            const isGM = (myRole === 'gm');
+            document.getElementById('gm-host-next-round-container').classList.toggle('hidden', !isGM);
+            document.getElementById('waiting-gm-next-msg').classList.toggle('hidden', isGM);
+        }
+
+        window.startNextRound = async function() {
+            if(myRole !== 'gm' || !db || !currentRoomCode) return;
+            const roomRef = doc(db, "rooms", currentRoomCode);
+            const snap = await getDoc(roomRef);
+            if(!snap.exists()) return;
+            const data = snap.data();
+            if(data.status !== 'round_ended') return;
+
+            const len = data.wordLength || 3;
+            const first = nextFirstPlayer(data);
+
+            data.round = (data.round || 1) + 1;
+            data.firstPlayer = first;
+            resetRoundFields(data);
+            data.status = 'drafting';
+            data.turnPhase = selectingPhaseFor(first);
+            data.gridWords = generateGrid(len);
+
+            await updateDoc(roomRef, data);
+            document.getElementById('round-end-modal').classList.add('hidden');
+        };
+    </script>
+</body>
+</html>
